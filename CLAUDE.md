@@ -17,8 +17,8 @@ EzStorage：教學／治療教具的倉儲借用系統。用 QR Code 借用、�
 ## 技術
 
 - 正式系統：Node.js 24.15+、Express 5、SQLite，不使用 GAS 或 Google Sheet。
-- 前端在 `prototype/`，已接上 REST API，不能再用靜態伺服器當作完整系統啟動。
-- 共用借還規則在 `shared/engine.js`；所有寫入必須經後端權限與資料驗證。
+- 前端 TypeScript 在 `prototype/`。正式服務從 `dist/` 提供前端與 REST API，GitHub Pages 從 `dist-demo/` 提供靜態示範。
+- 共用借還規則在 `shared/engine.ts`；正式服務的寫入經後端權限與資料驗證。
 - 3D：Three.js，由本機套件提供。介面語言：繁體中文。
 - `./deploy.sh` 一鍵 Docker Compose 部署；`npm test` 驗證。
 - SMTP 是選配；未設定只保留站內通知，不可宣稱已寄出 Email。

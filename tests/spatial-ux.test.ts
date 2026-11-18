@@ -1,16 +1,19 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const { JSDOM } = require('jsdom');
-const { nextItemPosition } = require('../shared/placement');
-const root = path.resolve(__dirname, '..');
+import { startFrontend } from './browser-fixture.ts';
+import test from 'node:test';
+import type { TestContext } from 'node:test';
+import type { FixtureWindow } from './browser-fixture.ts';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { JSDOM } from 'jsdom';
+import { nextItemPosition } from '../shared/placement.ts';
+const root = path.resolve(import.meta.dirname, '..');
 
 test('automatic placement spreads new items within each shelf without changing existing items', () => {
   const items = [{ unit: 'other', layer: 1, x: .18, y: .25 }, { unit: 'A', layer: 2, x: .5, y: .25 }];
   const original = structuredClone(items);
   assert.deepEqual(nextItemPosition(items, 'A', 1), { x: .18, y: .25 });
-  const created = [];
+  const created: typeof items = [];
   for (let index = 0; index < 100; index++) {
     const position = nextItemPosition(items, 'A', 1);
     assert.ok(position.x >= .05 && position.x <= .95 && position.y >= .1 && position.y <= .85);
@@ -23,7 +26,7 @@ test('automatic placement spreads new items within each shelf without changing e
   assert.deepEqual(nextItemPosition([{ unit: 'A', layer: 1 }], 'A', 1), { x: .5, y: .25 });
 });
 
-async function roomPage(t, { role = 'admin', empty = false } = {}) {
+async function roomPage(t: TestContext, { role = 'admin', empty = false } = {}) {
   const dom = new JSDOM(fs.readFileSync(path.join(root, 'prototype/index.html'), 'utf8'), { url: 'http://localhost:3000/#/room/1', runScripts: 'outside-only' });
   const w = dom.window;
   t.after(() => w.close());
@@ -40,8 +43,8 @@ async function roomPage(t, { role = 'admin', empty = false } = {}) {
     state: { today: '2026-11-18', records: [], events: [], requests: [], handovers: [], mails: [], receipts: [] },
     user, revision: 0, registrationEnabled: false
   };
-  const rotations = [];
-  let selectUnit;
+  const rotations: number[] = [];
+  let selectUnit: FixtureWindow['selectUnit'];
   w.fetch = async () => ({ ok: true, status: 200, json: async () => structuredClone(snapshot) });
   w.EZRoom = function (host, id, onSelect) {
     selectUnit = onSelect;
@@ -50,9 +53,7 @@ async function roomPage(t, { role = 'admin', empty = false } = {}) {
     this.setEditing = () => {};
     this.rotateSelected = async delta => { rotations.push(delta); return true; };
   };
-  for (const script of ['shared/engine.js', 'shared/placement.js', 'prototype/app.js']) {
-    await w.eval(fs.readFileSync(path.join(root, script), 'utf8'));
-  }
+  await startFrontend(w);
   return { w, document: w.document, rotations, select: () => selectUnit('A', null), tick: () => new Promise(resolve => setTimeout(resolve, 15)) };
 }
 
@@ -89,7 +90,7 @@ test('an empty room gives administrators the next setup step and borrowers a cle
   const setup = admin.document.querySelector('.room-empty');
   assert.ok(setup);
   assert.match(setup.textContent, /儲存處/);
-  assert.equal(setup.querySelector('a').getAttribute('href'), '#/manage/1');
+  assert.equal(setup.querySelector('a')!.getAttribute('href'), '#/manage/1');
   const borrower = await roomPage(t, { role: 'borrower', empty: true });
   const notice = borrower.document.querySelector('.room-empty');
   assert.ok(notice);

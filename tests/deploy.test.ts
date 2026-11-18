@@ -1,13 +1,14 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, statSync, existsSync, rmSync } = require('node:fs');
-const { tmpdir } = require('node:os');
-const { join, resolve } = require('node:path');
-const { spawnSync } = require('node:child_process');
+import test from 'node:test';
+import type { TestContext } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readFileSync, statSync, existsSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
-const project = resolve(__dirname, '..');
+const project = resolve(import.meta.dirname, '..');
 
-function fixture(t) {
+function fixture(t: TestContext) {
   const directory = mkdtempSync(join(tmpdir(), 'ezstorage-deploy-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
   const bin = join(directory, 'bin');

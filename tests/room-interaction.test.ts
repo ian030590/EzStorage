@@ -1,29 +1,44 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const vm = require('node:vm');
-const fs = require('node:fs');
-const THREE = require('three');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import vm from 'node:vm';
+import { browserScript } from './browser-fixture.ts';
+import * as THREE from 'three';
+import type { RoomViewHandle } from '../prototype/room3d.ts';
 
+type SimulatedEvent = {
+  pointerId: number; pointerType: string; button: number; clientX: number; clientY: number;
+  key?: string; stopped?: boolean; preventDefault(): void; stopImmediatePropagation(): void;
+};
+type Listener = (event: SimulatedEvent) => void;
 class Element {
+  children: Element[];
+  listeners: { name: string; callback: Listener; capture: boolean }[];
+  attributes: Record<string, string>;
+  style: Record<string, string>;
+  clientWidth: number;
+  clientHeight: number;
+  captures: Set<number>;
+  classList: { add(): void; toggle(): void };
+
   constructor() {
     this.children = []; this.listeners = []; this.attributes = {}; this.style = {};
     this.clientWidth = 900; this.clientHeight = 700; this.captures = new Set();
     this.classList = { add() {}, toggle() {} };
   }
-  append(...children) { this.children.push(...children); }
-  appendChild(child) { this.append(child); }
-  insertBefore(child) { this.append(child); }
-  setAttribute(key, value) { this.attributes[key] = value; }
-  removeAttribute(key) { delete this.attributes[key]; }
-  addEventListener(name, callback, options) { this.listeners.push({ name, callback, capture: options === true }); }
-  removeEventListener(name, callback) { this.listeners = this.listeners.filter((entry) => entry.name !== name || entry.callback !== callback); }
-  setPointerCapture(id) { this.captures.add(id); }
-  hasPointerCapture(id) { return this.captures.has(id); }
-  releasePointerCapture(id) { this.captures.delete(id); }
+  append(...children: Element[]) { this.children.push(...children); }
+  appendChild(child: Element) { this.append(child); }
+  insertBefore(child: Element) { this.append(child); }
+  setAttribute(key: string, value: string) { this.attributes[key] = value; }
+  removeAttribute(key: string) { delete this.attributes[key]; }
+  addEventListener(name: string, callback: Listener, options?: boolean) { this.listeners.push({ name, callback, capture: options === true }); }
+  removeEventListener(name: string, callback: Listener) { this.listeners = this.listeners.filter((entry) => entry.name !== name || entry.callback !== callback); }
+  setPointerCapture(id: number) { this.captures.add(id); }
+  hasPointerCapture(id: number) { return this.captures.has(id); }
+  releasePointerCapture(id: number) { this.captures.delete(id); }
   getBoundingClientRect() { return { left: 0, top: 0, width: 900, height: 700 }; }
   focus() {}
-  fire(name, values = {}) {
-    const event = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0, ...values,
+  fire(name: string, values: Partial<SimulatedEvent> = {}) {
+    const event: SimulatedEvent = { pointerId: 1, pointerType: 'mouse', button: 0, clientX: 0, clientY: 0, ...values,
       preventDefault() {}, stopImmediatePropagation() { this.stopped = true; } };
     for (const capture of [true, false]) {
       for (const entry of [...this.listeners]) {
@@ -35,31 +50,36 @@ class Element {
 
 function room() {
   const host = new Element();
-  let renderer, tick;
+  let renderer: Renderer;
+  let tick: () => void;
   class Renderer {
+    domElement: Element;
+    scene!: THREE.Scene;
+    camera!: THREE.Camera;
     constructor() { this.domElement = new Element(); renderer = this; }
     setPixelRatio() {} setClearColor() {} setSize() {} dispose() {} forceContextLoss() {}
-    render(scene, camera) { this.scene = scene; this.camera = camera; }
+    render(scene: THREE.Scene, camera: THREE.Camera) { this.scene = scene; this.camera = camera; }
   }
   const units = [
     { code: 'A', room: '1', type: 'shelf', layers: 3, x: 0, z: 0, w: 2, h: 2, d: 1, rotation: 0 },
     { code: 'B', room: '1', type: 'box', layers: 0, parent: 'A', x: .2, z: 0, y: 1.4, w: .6, h: .4, d: .5, rotation: 0 }
   ];
-  const calls = [], errors = [];
+  const calls: { code: string; x: number; z: number; rotation: number }[] = [];
+  const errors: string[] = [];
   let reject = false;
   const window = { THREE: { ...THREE, WebGLRenderer: Renderer }, EZData: { units, types: { shelf: '層架', box: '箱子' } },
     innerWidth: 1200, devicePixelRatio: 1, matchMedia: () => ({ matches: true }),
-    requestAnimationFrame: (callback) => { tick = callback; return 1; }, cancelAnimationFrame() {} };
+    requestAnimationFrame: (callback: () => void) => { tick = callback; return 1; }, cancelAnimationFrame() {} };
   const context = vm.createContext({ window,
     document: { createElement: () => new Element(), createElementNS: () => new Element() },
     ResizeObserver: class { observe() {} disconnect() {} } });
-  vm.runInContext(fs.readFileSync(require.resolve('../prototype/room3d.js'), 'utf8'), context);
-  const view = new window.EZRoom(host, '1', () => {}, { editing: true,
+  vm.runInContext(browserScript('room3d.ts'), context);
+  const view = new (window as unknown as { EZRoom: new (host: Element, room: string, onSelect: () => void, options: { editing: boolean; onMove(code: string, values: { x: number; z: number; rotation: number }): Promise<void>; onError(message: string): void }) => RoomViewHandle }).EZRoom(host, '1', () => {}, { editing: true,
     onMove: async (code, values) => { calls.push({ code, ...values }); if (reject) { throw new Error('offline'); } },
     onError: (message) => errors.push(message) });
   view.select('A', null, true);
-  tick();
-  return { view, units, calls, errors, canvas: renderer.domElement, renderer, tick: () => tick(), reject: () => { reject = true; } };
+  tick!();
+  return { view, units, calls, errors, canvas: renderer!.domElement, renderer: renderer!, tick: () => tick(), reject: () => { reject = true; } };
 }
 
 test('pointer drag saves once; cancellation restores positions; failed saves restore parent and box', async () => {

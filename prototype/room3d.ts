@@ -1,29 +1,54 @@
-(function () {
-  'use strict';
-  function boundedTransform(unit, values) {
+import type { BufferGeometry, Group, InterleavedBufferAttribute, LineBasicMaterial, LineSegments, Material, Mesh, MeshBasicMaterial, Object3D, Vector3, WebGLRenderer } from 'three';
+import type { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+import type { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import type { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import type { Unit } from '../shared/model.ts';
+
+type Transform = { x: number; z: number; rotation: number };
+type SpatialUnit = Pick<Unit, 'code' | 'parent' | 'w' | 'd' | 'x' | 'z'> & Partial<Pick<Unit, 'rotation'>>;
+type XY = { x: number; y: number };
+type Positioned = Transform & { code: string };
+type Block = Mesh<BufferGeometry, MeshBasicMaterial[]>;
+type Stroke = { object: Object3D; coordinates: number[] | (() => number[]); enabled: (() => boolean) | null; count: number; bucket: number };
+interface Model {
+  unit: Unit; group: Group; doors: { group: Group; side: number }[];
+  drawers: { group: Group; layer: number }[]; lid: Group | null; meshes: Block[]; open: number;
+}
+interface RoomOptions {
+  editing?: boolean; onMove?: (code: string, transform: Transform) => Promise<void>;
+  onError?: (message: string) => void;
+}
+export interface RoomViewHandle {
+  setEditing(value: boolean): void;
+  moveSelected(dx: number, dz: number): Promise<boolean>;
+  rotateSelected(radians: number): Promise<boolean>;
+  select(code: string | null, layer?: number | null, initial?: boolean): void;
+  destroy(): void;
+}
+  export function boundedTransform(unit: Omit<SpatialUnit, 'code' | 'parent'>, values: Partial<Transform>) {
     var rotation = values.rotation === undefined ? unit.rotation || 0 : values.rotation;
     var halfX = (Math.abs(Math.cos(rotation)) * unit.w + Math.abs(Math.sin(rotation)) * unit.d) / 2;
     var halfZ = (Math.abs(Math.sin(rotation)) * unit.w + Math.abs(Math.cos(rotation)) * unit.d) / 2;
     if (halfX > 5 || halfZ > 4) { throw new Error('儲存處旋轉後超過房間大小。'); }
     return { x: Math.max(-5 + halfX, Math.min(5 - halfX, values.x === undefined ? unit.x : values.x)), z: Math.max(-4 + halfZ, Math.min(4 - halfZ, values.z === undefined ? unit.z : values.z)), rotation: rotation };
   }
-  function transformedUnits(units, code, values) {
-    var parent = units.find(function (unit) { return unit.code === code; });
+  export function transformedUnits(units: SpatialUnit[], code: string, values: Partial<Transform>) {
+    const parent = units.find(function (unit) { return unit.code === code; });
     if (!parent) { throw new Error('找不到這個儲存處。'); }
     var target = boundedTransform(parent, values);
     var turn = target.rotation - (parent.rotation || 0);
-    function belongs(unit) { return unit.code === code || !!unit.parent && belongs(units.find(function (candidate) { return candidate.code === unit.parent; }) || { code: null }); }
+    function belongs(unit?: SpatialUnit): boolean { return !!unit && (unit.code === code || !!unit.parent && belongs(units.find(candidate => candidate.code === unit.parent))); }
     return units.filter(belongs).map(function (unit) {
       var dx = unit.x - parent.x;
       var dz = unit.z - parent.z;
       return { code: unit.code, x: target.x + dx * Math.cos(turn) + dz * Math.sin(turn), z: target.z - dx * Math.sin(turn) + dz * Math.cos(turn), rotation: (unit.rotation || 0) + turn };
     });
   }
-  function placeRoomTags(points, width, height) {
-    var placed = [];
+  export function placeRoomTags(points: XY[], width: number, height: number) {
+    var placed: XY[] = [];
     var minimum = 46;
-    function clamp(value, low, high) { return Math.max(low, Math.min(high, value)); }
-    function free(x, y) { return placed.every(function (p) { return Math.abs(x - p.x) >= minimum || Math.abs(y - p.y) >= minimum; }); }
+    function clamp(value: number, low: number, high: number) { return Math.max(low, Math.min(high, value)); }
+    function free(x: number, y: number) { return placed.every(function (p) { return Math.abs(x - p.x) >= minimum || Math.abs(y - p.y) >= minimum; }); }
     points.forEach(function (point) {
       var x = clamp(point.x, 24, width - 24);
       var y = clamp(point.y, 26, height - 95);
@@ -42,25 +67,31 @@
     });
     return placed;
   }
-  function RoomOrbit(canvas, changed, clicked) {
+  export class RoomOrbit {
+    declare azimuth: number;
+    declare polar: number;
+    declare zoom: number;
+    declare dragging: () => boolean;
+    declare destroy: () => void;
+    constructor(canvas: HTMLCanvasElement, changed: () => void, clicked: (event: PointerEvent) => void) {
     var self = this;
-    var pointers = new Map();
+    var pointers = new Map<number, XY & { startX: number; startY: number }>();
     var moved = false;
     var pinchDistance = 0;
-    var listeners = [];
+    var listeners: { name: string; callback: EventListener; options?: AddEventListenerOptions }[] = [];
     this.azimuth = Math.atan2(11, 13);
     this.polar = Math.acos(10 / Math.sqrt(390));
     this.zoom = 1;
-    function clamp(value, minimum, maximum) { return Math.max(minimum, Math.min(maximum, value)); }
+    function clamp(value: number, minimum: number, maximum: number) { return Math.max(minimum, Math.min(maximum, value)); }
     function distance() {
       var pair = Array.from(pointers.values());
       return pair.length < 2 ? 0 : Math.hypot(pair[0].x - pair[1].x, pair[0].y - pair[1].y);
     }
-    function listen(name, callback, options) {
+    function listen<K extends keyof HTMLElementEventMap>(name: K, callback: (event: HTMLElementEventMap[K]) => void, options?: AddEventListenerOptions) {
       canvas.addEventListener(name, callback, options);
-      listeners.push({ name: name, callback: callback, options: options });
+      listeners.push({ name: name, callback: callback as EventListener, options: options });
     }
-    function zoomBy(factor) {
+    function zoomBy(factor: number) {
       self.zoom = clamp(self.zoom * factor, .7, 1.6);
       changed();
     }
@@ -89,7 +120,7 @@
         changed();
       }
     });
-    function release(event, cancelled) {
+    function release(event: PointerEvent, cancelled: boolean) {
       var previous = pointers.get(event.pointerId);
       if (!previous) { return; }
       if (Math.hypot(event.clientX - previous.startX, event.clientY - previous.startY) > 5) { moved = true; }
@@ -116,11 +147,17 @@
       pointers.clear();
     };
   }
-  function RoomView(host, roomId, onSelect, options) {
-    options = options || {};
+  }
+  export class RoomView implements RoomViewHandle {
+    declare setEditing: RoomViewHandle['setEditing'];
+    declare moveSelected: RoomViewHandle['moveSelected'];
+    declare rotateSelected: RoomViewHandle['rotateSelected'];
+    declare select: RoomViewHandle['select'];
+    declare destroy: RoomViewHandle['destroy'];
+    constructor(host: HTMLElement, roomId: string, onSelect: (code: string | null, layer: number | null) => void, options: RoomOptions = {}) {
     var editing = !!options.editing;
     var saving = false;
-    var drag = null;
+    var drag: { pointerId: number; code: string; before: (Positioned & SpatialUnit)[]; x: number; y: number; dx: number; dz: number; moved: boolean } | null = null;
     this.setEditing = function (value) { editing = !!value; };
     this.moveSelected = this.rotateSelected = function () {
       if (options.onError) { options.onError('3D 畫面無法使用，請從「編輯房間與物品」調整位置與角度。'); }
@@ -128,11 +165,11 @@
     };
     var THREE = window.THREE;
     var units = window.EZData.units.filter(function (u) { return u.room === roomId; });
-    var selected = null;
-    var selectedLayer = null;
+    var selected: string | null = null;
+    var selectedLayer: number | null = null;
     var disposed = false;
-    var frameId;
-    var hovered = null;
+    var frameId: number;
+    var hovered: string | null = null;
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
     var tags = document.createElement('div');
     tags.className = 'unit-tags';
@@ -140,8 +177,8 @@
     leaders.classList.add('leader-lines');
     leaders.setAttribute('aria-hidden', 'true');
     host.append(leaders, tags);
-    var buttons = {};
-    var lines = {};
+    var buttons: Record<string, HTMLButtonElement> = {};
+    var lines: Record<string, { line: Element; dot: Element }> = {};
     units.forEach(function (u, index) {
       var button = document.createElement('button');
       button.type = 'button';
@@ -161,7 +198,9 @@
       leaders.append(line, dot);
       lines[u.code] = { line: line, dot: dot };
     });
-    function selectFromTag(code) {
+    const select = (code: string | null, layer?: number | null) => { selected = code; selectedLayer = layer ?? null; markButtons(); };
+    let setSelection: RoomViewHandle['select'] = select;
+    function selectFromTag(code: string) {
       if (selected === code && selectedLayer !== null) { setSelection(code, null); }
       else { setSelection(selected === code ? null : code, null); }
       onSelect(selected, selectedLayer);
@@ -174,19 +213,17 @@
       warning.className = 'stage-error';
       warning.textContent = '3D 程式未載入。請重新整理，或使用標籤查看儲存處。';
       host.appendChild(warning);
-      setSelection = function (code, layer) { selected = code; selectedLayer = layer; markButtons(); };
       this.select = setSelection;
       this.destroy = function () { disposed = true; };
       return;
     }
-    var renderer;
+    var renderer: WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); }
     catch (error) {
       var errorText = document.createElement('p');
       errorText.className = 'stage-error';
       errorText.textContent = '這個瀏覽器無法啟用 3D，請使用標籤查看儲存處。';
       host.appendChild(errorText);
-      setSelection = function (code, layer) { selected = code; selectedLayer = layer; markButtons(); };
       this.select = setSelection;
       this.destroy = function () { disposed = true; };
       return;
@@ -207,17 +244,17 @@
     var focusZoom = 1;
     var raycaster = new THREE.Raycaster();
     var pointer = new THREE.Vector2();
-    var models = {};
-    var interactive = [];
-    var allMaterials = [];
-    var strokeSources = [];
-    var lineMaterials = [];
-    function material(color) {
+    var models: Record<string, Model> = {};
+    var interactive: Object3D[] = [];
+    var allMaterials: Material[] = [];
+    var strokeSources: Stroke[] = [];
+    var lineMaterials: LineMaterial[] = [];
+    function material(color: number) {
       var m = new THREE.MeshBasicMaterial({ color: color, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 });
       allMaterials.push(m);
       return m;
     }
-    function block(parent, width, height, depth, x, y, z, owner, layer, color) {
+    function block(parent: Object3D, width: number, height: number, depth: number, x: number, y: number, z: number, owner?: string, layer?: number | null, color?: number) {
       var colors = color ? [color, color, color, color, color, color] : [0xDCE4EE, 0xC7D2E0, 0xFFFFFF, 0xC7D2E0, 0xDCE4EE, 0xC7D2E0];
       var mats = colors.map(material);
       var geometry = new THREE.BoxGeometry(width, height, depth);
@@ -228,25 +265,25 @@
       if (owner) { interactive.push(mesh); }
       return mesh;
     }
-    function stroke(object, coordinates, enabled, count, bucket) {
+    function stroke(object: Object3D, coordinates: Stroke['coordinates'], enabled: Stroke['enabled'] = null, count?: number, bucket = 0) {
       strokeSources.push({ object: object, coordinates: coordinates, enabled: enabled, count: count || coordinates.length / 6, bucket: bucket || 0 });
     }
-    function segment(list, start, end) { list.push(start[0], start[1], start[2], end[0], end[1], end[2]); }
-    function rectangle(list, corners, skip) {
+    function segment(list: number[], start: number[], end: number[]) { list.push(start[0], start[1], start[2], end[0], end[1], end[2]); }
+    function rectangle(list: number[], corners: number[][], skip?: number) {
       for (var edge = 0; edge < 4; edge += 1) {
         if (edge !== skip) { segment(list, corners[edge], corners[(edge + 1) % 4]); }
       }
     }
-    function frameEdges(width, height, back, front, topRim) {
+    function frameEdges(width: number, height: number, back: number, front: number, topRim?: boolean) {
       var corners = [[-width / 2, 0, back], [width / 2, 0, back], [width / 2, 0, front], [-width / 2, 0, front]];
       var top = corners.map(function (point) { return [point[0], height, point[2]]; });
-      var list = [];
+      var list: number[] = [];
       rectangle(list, corners);
       if (topRim) { rectangle(list, top); }
       corners.forEach(function (point, index) { segment(list, point, top[index]); });
       return list;
     }
-    function panelStroke(mesh, width, height, depth, axis, skip, enabled) {
+    function panelStroke(mesh: Block, width: number, height: number, depth: number, axis: string, skip?: number | (() => number), enabled: Stroke['enabled'] = null) {
       stroke(mesh, function () {
         var view = new THREE.Vector3().copy(camera.position).sub(target);
         view.transformDirection(new THREE.Matrix4().copy(mesh.matrixWorld).invert());
@@ -258,24 +295,25 @@
           var z = (view.z >= 0 ? 1 : -1) * depth / 2;
           corners = [[-width / 2, -height / 2, z], [width / 2, -height / 2, z], [width / 2, height / 2, z], [-width / 2, height / 2, z]];
         }
-        var list = [];
+        var list: number[] = [];
         rectangle(list, corners, typeof skip === 'function' ? skip() : skip);
         return list;
       }, enabled, 4);
     }
-    function lineBatch(color, width, capacity) {
+    function lineBatch(color: number, width: number, capacity: number) {
       var positions = new Float32Array(Math.max(1, capacity) * 6);
-      var geometry;
-      var lineMaterial;
-      var object;
+      var geometry: BufferGeometry | LineSegmentsGeometry | undefined;
+      var lineMaterial: LineBasicMaterial | LineMaterial | undefined;
+      var object: LineSegments | LineSegments2 | undefined;
       var fat = !!(THREE.LineSegmentsGeometry && THREE.LineMaterial && THREE.LineSegments2);
       if (fat) {
         try {
-          geometry = new THREE.LineSegmentsGeometry();
-          geometry.setPositions(positions);
-          geometry.instanceCount = 0;
+          const fatGeometry = new THREE.LineSegmentsGeometry();
+          geometry = fatGeometry;
+          fatGeometry.setPositions(positions);
+          fatGeometry.instanceCount = 0;
           lineMaterial = new THREE.LineMaterial({ color: color, linewidth: width, alphaToCoverage: true, depthWrite: false });
-          object = new THREE.LineSegments2(geometry, lineMaterial);
+          object = new THREE.LineSegments2(fatGeometry, lineMaterial);
         } catch (error) {
           if (geometry) { geometry.dispose(); }
           if (lineMaterial) { lineMaterial.dispose(); }
@@ -289,35 +327,35 @@
         lineMaterial = new THREE.LineBasicMaterial({ color: color, depthWrite: false });
         object = new THREE.LineSegments(geometry, lineMaterial);
       } else {
-        lineMaterials.push(lineMaterial);
+        lineMaterials.push(lineMaterial as LineMaterial);
       }
-      allMaterials.push(lineMaterial);
-      object.frustumCulled = false;
-      object.renderOrder = 1;
-      scene.add(object);
+      allMaterials.push(lineMaterial!);
+      object!.frustumCulled = false;
+      object!.renderOrder = 1;
+      scene.add(object!);
       return {
-        update: function (coordinates) {
+        update: function (coordinates: number[]) {
           positions.set(coordinates);
           if (fat) {
-            geometry.attributes.instanceStart.data.needsUpdate = true;
-            geometry.instanceCount = coordinates.length / 6;
+            ((geometry as LineSegmentsGeometry).attributes.instanceStart as InterleavedBufferAttribute).data.needsUpdate = true;
+            (geometry as LineSegmentsGeometry).instanceCount = coordinates.length / 6;
           } else {
-            geometry.attributes.position.needsUpdate = true;
-            geometry.setDrawRange(0, coordinates.length / 3);
+            geometry!.attributes.position.needsUpdate = true;
+            geometry!.setDrawRange(0, coordinates.length / 3);
           }
         }
       };
     }
-    function interior(mesh, faces) {
+    function interior(mesh: Block, faces: number[]) {
       mesh.userData.interiorFaces = faces;
       faces.forEach(function (face) { mesh.material[face].color.setHex(0x9FB0C6); });
       return mesh;
     }
-    function shelfBand(mesh) {
+    function shelfBand(mesh: Block) {
       mesh.userData.shelfBand = true;
       return interior(mesh, [0, 1, 2, 3, 4, 5]);
     }
-    function roomPlane(width, height, color, x, y, z, rotationX, rotationY) {
+    function roomPlane(width: number, height: number, color: number, x: number, y: number, z: number, rotationX: number, rotationY: number) {
       var fill = material(color);
       fill.side = THREE.DoubleSide;
       var mesh = new THREE.Mesh(new THREE.PlaneGeometry(width, height), fill);
@@ -328,13 +366,13 @@
     roomPlane(10, 8, 0xF4F7FA, 0, -.03, 0, -Math.PI / 2, 0);
     roomPlane(10, 3.48, 0xD8E0EA, 0, 1.71, -4, 0, 0);
     roomPlane(8, 3.48, 0xE3E9F0, -5, 1.71, 0, 0, Math.PI / 2);
-    var roomEdges = [];
+    var roomEdges: number[] = [];
     rectangle(roomEdges, [[-5, -.03, -4], [5, -.03, -4], [5, -.03, 4], [-5, -.03, 4]]);
     segment(roomEdges, [-5, 3.45, 4], [-5, 3.45, -4]);
     segment(roomEdges, [-5, 3.45, -4], [5, 3.45, -4]);
     [[-5, -4], [-5, 4], [5, -4]].forEach(function (corner) { segment(roomEdges, [corner[0], -.03, corner[1]], [corner[0], 3.45, corner[1]]); });
     stroke(scene, roomEdges);
-    var gridVertices = [];
+    var gridVertices: number[] = [];
     for (var x = -4; x < 5; x += 1) { gridVertices.push(x, -.022, -4, x, -.022, 4); }
     for (var z = -3; z < 4; z += 1) { gridVertices.push(-5, -.022, z, 5, -.022, z); }
     stroke(scene, gridVertices, null, 0, 1);
@@ -343,14 +381,14 @@
       group.position.set(u.x, u.y || 0, u.z);
       group.rotation.y = u.rotation;
       scene.add(group);
-      var model = { unit: u, group: group, doors: [], drawers: [], lid: null, meshes: [], open: 0 };
+      var model: Model = { unit: u, group: group, doors: [], drawers: [], lid: null, meshes: [], open: 0 };
       models[u.code] = model;
       stroke(group, function () {
         var box = u.type === 'box';
         var closed = box && model.open <= .02;
         return frameEdges(u.w + .07, u.h + (box && !closed ? 0 : .035), -u.d / 2, u.d / 2, !closed);
       }, null, 12);
-      function part(w, h, d, px, py, pz, layer) {
+      function part(w: number, h: number, d: number, px: number, py: number, pz: number, layer?: number | null) {
         var mesh = block(group, w, h, d, px, py, pz, u.code, layer);
         model.meshes.push(mesh);
         return mesh;
@@ -400,7 +438,7 @@
               var frontY = step - .08;
               var rimY = step - .13;
               stroke(tray, [-half, frontY, frontZ, half, frontY, frontZ], function () { return !last || model.open > .02; });
-              var rim = [];
+              var rim: number[] = [];
               [-half, half].forEach(function (edgeX) {
                 segment(rim, [edgeX, 0, frontZ], [edgeX, frontY, frontZ]);
                 segment(rim, [edgeX, rimY, frontZ], [edgeX, rimY, backZ]);
@@ -439,8 +477,8 @@
     var startPoint = new THREE.Vector3();
     var endPoint = new THREE.Vector3();
     function updateStrokes() {
-      var unique = new Map();
-      function key(point) { return [point.x, point.y, point.z].map(function (value) { return Math.round(value * 100000); }).join(','); }
+      var unique = new Map<string, { bucket: number; coordinates: number[] }>();
+      function key(point: Vector3) { return [point.x, point.y, point.z].map(function (value) { return Math.round(value * 100000); }).join(','); }
       strokeSources.forEach(function (source) {
         if (source.enabled && !source.enabled()) { return; }
         var coordinates = typeof source.coordinates === 'function' ? source.coordinates() : source.coordinates;
@@ -455,8 +493,8 @@
           if (!previous || source.bucket < previous.bucket) { unique.set(edge, { bucket: source.bucket, coordinates: [startPoint.x, startPoint.y, startPoint.z, endPoint.x, endPoint.y, endPoint.z] }); }
         }
       });
-      var ink = [];
-      var grid = [];
+      var ink: number[] = [];
+      var grid: number[] = [];
       unique.forEach(function (edge) { Array.prototype.push.apply(edge.bucket ? grid : ink, edge.coordinates); });
       inkLines.update(ink);
       gridLines.update(grid);
@@ -474,7 +512,7 @@
         });
       });
     }
-    function setSelection(code, layer, initial) {
+    setSelection = function (code: string | null, layer?: number | null, initial?: boolean) {
       selected = code;
       selectedLayer = layer === undefined ? null : layer;
       markButtons();
@@ -515,27 +553,27 @@
     var observer = new ResizeObserver(resize);
     observer.observe(host);
     resize();
-    function hitTest(event) {
+    function hitTest(event: PointerEvent) {
       var bounds = renderer.domElement.getBoundingClientRect();
       pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -((event.clientY - bounds.top) / bounds.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
       return raycaster.intersectObjects(interactive, false).find(function (hit) { return !hit.object.userData.hit || hit.object.userData.code === selected; });
     }
     var floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    var editListeners = [];
-    function editListen(name, handler) {
+    var editListeners: { name: string; handler: EventListener }[] = [];
+    function editListen<K extends keyof HTMLElementEventMap>(name: K, handler: (event: HTMLElementEventMap[K]) => void) {
       renderer.domElement.addEventListener(name, handler, true);
-      editListeners.push({ name: name, handler: handler });
+      editListeners.push({ name: name, handler: handler as EventListener });
     }
-    function report(message) { if (options.onError) { options.onError(message); } }
-    function floorPoint(event) {
+    function report(message: string) { if (options.onError) { options.onError(message); } }
+    function floorPoint(event: PointerEvent) {
       var bounds = renderer.domElement.getBoundingClientRect();
       pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -((event.clientY - bounds.top) / bounds.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
       return raycaster.ray.intersectPlane(floorPlane, new THREE.Vector3());
     }
     function snapshot() { return units.map(function (u) { return { code: u.code, parent: u.parent, x: u.x, z: u.z, rotation: u.rotation || 0, w: u.w, d: u.d }; }); }
-    function applyTransforms(changes) {
+    function applyTransforms(changes: Positioned[]) {
       changes.forEach(function (change) {
         var model = models[change.code];
         model.unit.x = change.x;
@@ -546,7 +584,7 @@
         model.group.rotation.y = change.rotation;
       });
     }
-    async function persist(code, before) {
+    async function persist(code: string, before: Positioned[]) {
       var u = models[code].unit;
       saving = true;
       renderer.domElement.setAttribute('aria-busy', 'true');
@@ -555,32 +593,32 @@
         await options.onMove(code, { x: u.x, z: u.z, rotation: u.rotation });
         return true;
       } catch (error) {
-        if (!disposed) { applyTransforms(before); report('位置未儲存，已還原：' + error.message); }
+        if (!disposed) { applyTransforms(before); report('位置未儲存，已還原：' + (error instanceof Error ? error.message : String(error))); }
         return false;
       } finally {
         saving = false;
         renderer.domElement.removeAttribute('aria-busy');
       }
     }
-    function canMove(code) {
+    function canMove(code: string | null): code is string {
       if (!editing || saving || !code || !models[code]) { return false; }
       if (models[code].unit.parent) { report('這個收納箱放在儲存處內，請移動它所屬的儲存處。'); return false; }
       return true;
     }
-    async function moveSelection(values) {
+    async function moveSelection(values: Partial<Transform>) {
       if (!canMove(selected) || drag) { return false; }
-      var code = selected;
+      var code = selected!;
       var before = snapshot();
       try { applyTransforms(transformedUnits(before, code, values)); }
-      catch (error) { report(error.message); return false; }
+      catch (error) { report((error instanceof Error ? error.message : String(error))); return false; }
       return persist(code, before);
     }
     this.moveSelected = function (dx, dz) {
-      var u = models[selected] && models[selected].unit;
+      var u = selected && models[selected]?.unit;
       return u ? moveSelection({ x: u.x + dx, z: u.z + dz }) : Promise.resolve(false);
     };
     this.rotateSelected = function (radians) {
-      var u = models[selected] && models[selected].unit;
+      var u = selected && models[selected]?.unit;
       return u ? moveSelection({ rotation: u.rotation + radians }) : Promise.resolve(false);
     };
     this.setEditing = function (value) {
@@ -592,7 +630,7 @@
       editing = !!value;
       host.classList.toggle('arranging', editing);
     };
-    function consume(event) { event.preventDefault(); event.stopImmediatePropagation(); }
+    function consume(event: Event) { event.preventDefault(); event.stopImmediatePropagation(); }
     editListen('pointerdown', function (event) {
       if (!editing || event.pointerType === 'mouse' && event.button !== 0) { return; }
       if (drag || saving) { consume(event); return; }
@@ -619,7 +657,7 @@
       var point = floorPoint(event);
       if (point) { applyTransforms(transformedUnits(drag.before, drag.code, { x: point.x + drag.dx, z: point.z + drag.dz })); }
     });
-    function endDrag(event, cancelled) {
+    function endDrag(event: PointerEvent, cancelled: boolean) {
       if (!drag || drag.pointerId !== event.pointerId) { return; }
       consume(event);
       var finished = drag;
@@ -632,7 +670,7 @@
     editListen('pointerup', function (event) { endDrag(event, false); });
     editListen('pointercancel', function (event) { endDrag(event, true); });
     editListen('lostpointercapture', function (event) { endDrag(event, true); });
-    editListen('keydown', function (event) {
+    editListen('keydown', (event) => {
       if (!editing || !selected || event.ctrlKey || event.metaKey || event.altKey) { return; }
       if (event.key === 'Escape' && drag) {
         consume(event);
@@ -643,10 +681,10 @@
         return;
       }
       var step = event.shiftKey ? .5 : .1;
-      var moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+      var moves: Record<string, number[]> = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
       if (moves[event.key]) { consume(event); this.moveSelected(moves[event.key][0], moves[event.key][1]); }
       else if (event.key.toLowerCase() === 'r') { consume(event); this.rotateSelected(Math.PI / 2); }
-    }.bind(this));
+    });
     renderer.domElement.addEventListener('pointermove', function (event) {
       if (orbit.dragging()) { renderer.domElement.style.cursor = 'grabbing'; return; }
       var hit = hitTest(event);
@@ -655,7 +693,7 @@
       if (code !== hovered) { hovered = code; recolor(); }
     });
     renderer.domElement.addEventListener('pointerleave', function () { hovered = null; recolor(); });
-    function selectAtPointer(event) {
+    function selectAtPointer(event: PointerEvent) {
       var hit = hitTest(event);
       if (!hit) {
         setSelection(selectedLayer !== null ? selected : null, null);
@@ -693,7 +731,7 @@
       var width = host.clientWidth;
       var height = host.clientHeight;
       var narrow = window.innerWidth < 900;
-      var phoneOffsets = { A1: [30, -50], B1: [-35, -60], A2: [40, -70], B2: [-40, -15], A3: [50, -22], C1: [-35, 50] };
+      var phoneOffsets: Record<string, number[]> = { A1: [30, -50], B1: [-35, -60], A2: [40, -70], B2: [-40, -15], A3: [50, -22], C1: [-35, 50] };
       var anchors = units.map(function (u) {
         var anchor = new THREE.Vector3(0, u.h + .03, 0);
         models[u.code].group.localToWorld(anchor);
@@ -710,12 +748,12 @@
         buttons[u.code].style.left = bx + 'px';
         buttons[u.code].style.top = by + 'px';
         var leader = lines[u.code];
-        leader.line.setAttribute('x1', anchors[index].px);
-        leader.line.setAttribute('y1', anchors[index].py);
-        leader.line.setAttribute('x2', bx);
-        leader.line.setAttribute('y2', by);
-        leader.dot.setAttribute('cx', anchors[index].px);
-        leader.dot.setAttribute('cy', anchors[index].py);
+        leader.line.setAttribute('x1', String(anchors[index].px));
+        leader.line.setAttribute('y1', String(anchors[index].py));
+        leader.line.setAttribute('x2', String(bx));
+        leader.line.setAttribute('y2', String(by));
+        leader.dot.setAttribute('cx', String(anchors[index].px));
+        leader.dot.setAttribute('cy', String(anchors[index].py));
       });
       renderer.render(scene, camera);
       frameId = window.requestAnimationFrame(frame);
@@ -728,16 +766,15 @@
       observer.disconnect();
       orbit.destroy();
       editListeners.forEach(function (listener) { renderer.domElement.removeEventListener(listener.name, listener.handler, true); });
-      scene.traverse(function (object) { if (object.geometry) { object.geometry.dispose(); } });
+      scene.traverse(function (object) { if ('geometry' in object && object.geometry instanceof THREE.BufferGeometry) { object.geometry.dispose(); } });
       allMaterials.forEach(function (m) { m.dispose(); });
       renderer.dispose();
       renderer.forceContextLoss();
     };
   }
-  if (typeof module !== 'undefined' && module.exports) { module.exports = { boundedTransform: boundedTransform, transformedUnits: transformedUnits, placeRoomTags: placeRoomTags }; }
+  }
   if (typeof window !== 'undefined') {
     window.EZRoom = RoomView;
     window.EZRoomOrbit = RoomOrbit;
     window.EZPlaceRoomTags = placeRoomTags;
   }
-}());

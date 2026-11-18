@@ -1,67 +1,65 @@
-(function (root, factory) {
-  if (typeof module === "object" && module.exports) module.exports = factory;
-  else root.createEngine = factory;
-}(typeof window === "undefined" ? globalThis : window, function (data, persistedState) {
-  'use strict';
-  var state = persistedState || { today: data.today, user: null, records: data.records || [], events: [], requests: [], handovers: [], mails: [], receipts: [] };
-  function validationError(message) { return Object.assign(new Error(message), { status: 400 }); }
-  function id(prefix) { return prefix + "-" + globalThis.crypto.randomUUID(); }
-  function dateNumber(value) { return Date.parse(value + 'T00:00:00Z'); }
-  function addDays(value, days) {
+import type { Allocation, Booking, Catalog, Extension, Loan, Mail, Receipt, Selection, State } from './model.ts';
+
+export default function createEngine(data: Catalog, persistedState?: State, notificationsOnly = false) {
+  var state: State = persistedState || { today: data.today, user: null, records: data.records || [], events: [], requests: [], handovers: [], mails: [], receipts: [] };
+  function validationError(message: string) { return Object.assign(new Error(message), { status: 400 }); }
+  function id(prefix: string) { return prefix + "-" + globalThis.crypto.randomUUID(); }
+  function dateNumber(value: string) { return Date.parse(value + 'T00:00:00Z'); }
+  function addDays(value: string, days: number) {
     var result = new Date(dateNumber(value) + Number(days) * 86400000);
     if (!Number.isFinite(result.getTime()) || result.getUTCFullYear() > 9999 || result.getUTCFullYear() < 1) { throw validationError('日期超出瀏覽器可表示的範圍，請重新輸入天數。'); }
     return result.toISOString().slice(0, 10);
   }
-  function daysBetween(start, end) { return Math.round((dateNumber(end) - dateNumber(start)) / 86400000); }
-  function displayDates(value) { return String(value).replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, '$1/$2'); }
-  function person(key) { return data.people.find(function (p) { return p.id === key; }); }
-  function item(key) { return data.items.find(function (p) { return p.id === key; }); }
-  function unit(code) { return data.units.find(function (p) { return p.code === code; }); }
-  function updateAssetNumber(itemId, value) {
+  function daysBetween(start: string, end: string) { return Math.round((dateNumber(end) - dateNumber(start)) / 86400000); }
+  function displayDates(value: unknown) { return String(value).replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, '$1/$2'); }
+  function person(key: string) { return data.people.find(function (p) { return p.id === key; }); }
+  function item(key?: string | null) { return data.items.find(function (p) { return p.id === key; }); }
+  function unit(code?: string | null) { return data.units.find(function (p) { return p.code === code; }); }
+  function updateAssetNumber(itemId: string, value: unknown) {
     var inventory = item(itemId);
     if (!inventory) { throw validationError('找不到這個物品，請重新選擇。'); }
     inventory.assetNumber = String(value === undefined || value === null ? '' : value).trim();
     return inventory;
   }
-  function searchItems(query) {
+  function searchItems(query: unknown) {
     var term = String(query || '').trim().toLocaleLowerCase();
     if (!term) { return []; }
     return data.items.filter(function (inventory) {
       var storage = unit(inventory.unit);
-      var room = data.rooms.find(function (candidate) { return candidate.id === storage.room; });
-      return [inventory.name, inventory.assetNumber, inventory.code, storage.code, room.name].some(function (value) {
+      var room = data.rooms.find(function (candidate) { return candidate.id === storage!.room; });
+      return [inventory.name, inventory.assetNumber, inventory.code, storage!.code, room!.name].some(function (value) {
         return String(value || '').toLocaleLowerCase().indexOf(term) >= 0;
       });
     });
   }
-  function record(key) { return state.records.find(function (r) { return r.id === key; }); }
-  function held(r) { return r.picked - r.returned; }
-  function pending(r) { return Math.max(0, r.quantity - r.picked - r.cancelled - (r.rescheduledQuantity || 0)); }
-  function reservationStart(r) { return r.reservationStart || r.start; }
-  function pickupDeadline(r) { return r.keepUntilEnd ? r.end : addDays(reservationStart(r), 1); }
-  function awaitingToday(r) { return reservationStart(r) <= state.today && state.today <= r.end && state.today <= pickupDeadline(r) ? pending(r) : 0; }
-  function canReschedule(r) { return pending(r) > 0; }
-  function event(type, ref, details, date) {
+  function record(key?: string) { return state.records.find(function (r) { return r.id === key; }); }
+  function held(r: Loan) { return r.picked - r.returned; }
+  function pending(r: Loan) { return Math.max(0, r.quantity - r.picked - r.cancelled - (r.rescheduledQuantity || 0)); }
+  function reservationStart(r: Loan) { return r.reservationStart || r.start; }
+  function pickupDeadline(r: Loan) { return r.keepUntilEnd ? r.end : addDays(reservationStart(r), 1); }
+  function awaitingToday(r: Loan) { return reservationStart(r) <= state.today && state.today <= r.end && state.today <= pickupDeadline(r) ? pending(r) : 0; }
+  function canReschedule(r: Loan) { return pending(r) > 0; }
+  function event(type: string, ref: string, details?: object, date?: string) {
     state.events.push({ id: id('ev'), type: type, ref: ref, date: date || state.today, details: details || {} });
   }
-  function updateStatus(r) {
+  function updateStatus(r: Loan) {
     r.status = held(r) > 0 ? 'active' : pending(r) > 0 ? 'reserved' : r.picked > 0 ? 'returned' : r.autoCancelled ? 'auto_cancelled' : 'cancelled';
   }
-  function validDates(start, end) {
+  function validDates(start: string, end: string) {
     return /^\d{4}-\d{2}-\d{2}$/.test(start) && /^\d{4}-\d{2}-\d{2}$/.test(end) && Number.isFinite(dateNumber(start)) && Number.isFinite(dateNumber(end)) && new Date(dateNumber(start)).toISOString().slice(0, 10) === start && new Date(dateNumber(end)).toISOString().slice(0, 10) === end && start <= end;
   }
-  function segments(itemId, excluded, override) {
+  function segments(itemId: string, excluded?: string[], override?: { id?: string; end?: string; excludePendingId?: string }) {
     var excludedIds = excluded || [];
-    var result = [];
+    var result: (Booking & { recordId: string })[] = [];
     state.records.forEach(function (r) {
       if (r.itemId !== itemId || excludedIds.indexOf(r.id) >= 0) { return; }
-      var due = override && override.id === r.id ? override.end : r.end;
+      var due = override?.id === r.id && override.end ? override.end : r.end;
       if (held(r) > 0) { result.push({ start: r.start, end: due < state.today ? state.today : due, quantity: held(r), recordId: r.id }); }
       if (pending(r) > 0 && reservationStart(r) <= r.end && !(override && override.excludePendingId === r.id)) { result.push({ start: reservationStart(r), end: r.end, quantity: pending(r), recordId: r.id }); }
     });
     return result;
   }
-  function capacity(itemId, start, end, excluded, override) {
+  function capacity(itemId: string, start: string, end: string, excluded?: string[], override?: { id?: string; end?: string; excludePendingId?: string }) {
     if (!validDates(start, end)) { return 0; }
     var inventory = item(itemId);
     if (!inventory) { return 0; }
@@ -78,37 +76,37 @@
     });
     return Math.max(0, inventory.total - peak);
   }
-  function outToday(itemId) {
+  function outToday(itemId: string) {
     return state.records.filter(function (r) { return r.itemId === itemId; }).reduce(function (sum, r) {
       return sum + held(r) + awaitingToday(r);
     }, 0);
   }
-  function remaining(itemId) { return item(itemId).total - outToday(itemId); }
-  function rescheduleCapacity(r, start, end) { return capacity(r.itemId, start, end, [], { excludePendingId: r.id }); }
-  function futureReservations(r) {
+  function remaining(itemId: string) { return item(itemId)!.total - outToday(itemId); }
+  function rescheduleCapacity(r: Loan, start: string, end: string) { return capacity(r.itemId, start, end, [], { excludePendingId: r.id }); }
+  function futureReservations(r: Loan) {
     return state.records.filter(function (candidate) {
       return candidate.itemId === r.itemId && candidate.userId !== r.userId && pending(candidate) > 0 && reservationStart(candidate) > r.start && candidate.end >= state.today;
     }).sort(function (a, b) { return reservationStart(a).localeCompare(reservationStart(b)) || a.id.localeCompare(b.id); });
   }
-  function sendMail(type, to, subject, paragraphs, actions, refs, date) {
+  function sendMail(type: string, to: string, subject: string, paragraphs: string[], actions: string[], refs: Mail["refs"], date?: string) {
     var bytes = new Uint32Array(3);
     globalThis.crypto.getRandomValues(bytes);
-    var message = { id: id('mail'), type: type, to: to, subject: displayDates(subject), paragraphs: paragraphs.map(displayDates), actions: actions || [], refs: refs || {}, date: date || state.today, tokenExpires: Date.now() + 14 * 86400000 };
+    var message: Mail = { token: '', id: id('mail'), type: type, to: to, subject: displayDates(subject), paragraphs: paragraphs.map(displayDates), actions: actions || [], refs: refs || {}, date: date || state.today, tokenExpires: Date.now() + 14 * 86400000 };
     message.token = message.id + '-' + Array.from(bytes).map(function (n) { return n.toString(36); }).join('');
     state.mails.push(message);
     event('email', message.id, { type: type, to: to }, message.date);
     return message;
   }
-  function contact(userId) { var p = person(userId); return p.name + '（' + p.email + '）'; }
-  function acknowledge(title, paragraphs) {
-    var receipt = { id: id('result'), title: displayDates(title), paragraphs: paragraphs.map(displayDates) };
+  function contact(userId: string) { var p = person(userId)!; return p.name + '（' + p.email + '）'; }
+  function acknowledge(title: string, paragraphs: string[]) {
+    var receipt: Receipt = { id: id('result'), title: displayDates(title), paragraphs: paragraphs.map(displayDates) };
     state.receipts.push(receipt);
     return receipt;
   }
-  function makeBorrow(userId, name, selections, source) {
+  function makeBorrow(userId: string, name: string, selections: Selection[], source: string) {
     if (!person(userId) || !name.trim() || !selections.length) { throw validationError('請填寫姓名，並勾選要借用的物品。'); }
-    var seen = [];
-    var unitCode = null;
+    var seen: string[] = [];
+    var unitCode: string | null = null;
     selections.forEach(function (selection) {
       var inventory = item(selection.itemId);
       if (!inventory || seen.indexOf(selection.itemId) >= 0 || (unitCode && unitCode !== inventory.unit)) { throw validationError('請選擇同一儲存處的物品。'); }
@@ -126,16 +124,16 @@
       if (immediate) { event('pickup', r.id, { quantity: r.quantity, source: 'scan' }); }
     });
     return acknowledge('借用／預約已完成', selections.map(function (s) {
-      return item(s.itemId).name + ' · ' + s.quantity + ' 件，' + s.start + ' 至 ' + s.end + (source === 'scan' && s.start === state.today ? '，已領取。' : '，請到現場掃碼領取。');
+      return item(s.itemId)!.name + ' · ' + s.quantity + ' 件，' + s.start + ' 至 ' + s.end + (source === 'scan' && s.start === state.today ? '，已領取。' : '，請到現場掃碼領取。');
     }));
   }
-  function pickupAvailability(r) {
+  function pickupAvailability(r: Loan) {
     if (!pending(r) || r.end < state.today || state.today > pickupDeadline(r)) { return { allowed: false, reason: '已超過可領取期間。' }; }
     var maximum = capacity(r.itemId, state.today, r.end, [r.id]) - held(r);
     var enough = maximum >= pending(r);
     return { allowed: enough, reason: enough ? '' : '目前庫存不足，無法提早領取。' };
   }
-  function pickup(recordId, userId) {
+  function pickup(recordId: string, userId: string) {
     var r = record(recordId);
     if (!r || r.userId !== userId) { throw validationError('找不到這個帳號的預約。'); }
     var check = pickupAvailability(r);
@@ -147,25 +145,25 @@
     r.picked += quantity;
     updateStatus(r);
     event('pickup', r.id, { quantity: quantity, previousStart: previousStart, start: state.today, source: 'scan' });
-    return acknowledge('已確認領取', [item(r.itemId).name + ' · ' + quantity + ' 件，這次領取的部分從 ' + state.today + ' 開始借用，歸還日期仍為 ' + r.end + '。']);
+    return acknowledge('已確認領取', [item(r.itemId)!.name + ' · ' + quantity + ' 件，這次領取的部分從 ' + state.today + ' 開始借用，歸還日期仍為 ' + r.end + '。']);
   }
-  function cancelRequestsIfReturned(r) {
+  function cancelRequestsIfReturned(r: Loan) {
     if (held(r) > 0) { return; }
     state.requests.filter(function (req) { return req.loanId === r.id && req.status === 'pending'; }).forEach(function (req) {
       req.status = 'cancelled';
       event('extension_cancelled', req.id, { reason: 'returned' });
     });
   }
-  function returnQuantity(recordId, quantity, userId) {
+  function returnQuantity(recordId: string, quantity: number, userId: string) {
     var r = record(recordId);
     if (!r || r.userId !== userId || !Number.isSafeInteger(quantity) || quantity < 1 || quantity > held(r)) { throw validationError('請輸入尚未歸還範圍內的件數。'); }
     r.returned += quantity;
     updateStatus(r);
     event('return', r.id, { quantity: quantity, source: 'scan', remaining: held(r) });
     cancelRequestsIfReturned(r);
-    return acknowledge('歸還已記錄', [item(r.itemId).name + ' 已歸還 ' + quantity + ' 件，尚有 ' + held(r) + ' 件在你手上。']);
+    return acknowledge('歸還已記錄', [item(r.itemId)!.name + ' 已歸還 ' + quantity + ' 件，尚有 ' + held(r) + ' 件在你手上。']);
   }
-  function cancelReservation(recordId, userId) {
+  function cancelReservation(recordId: string, userId: string) {
     var r = record(recordId);
     if (!r || r.userId !== userId || !pending(r)) { throw validationError('這筆預約已領取或已取消。'); }
     var quantity = pending(r);
@@ -173,9 +171,9 @@
     updateStatus(r);
     event('cancel', r.id, { quantity: quantity });
     refreshRequestsForItem(r.itemId);
-    return acknowledge('預約已取消', [item(r.itemId).name + ' · ' + quantity + ' 件的預約已取消，原紀錄保留。']);
+    return acknowledge('預約已取消', [item(r.itemId)!.name + ' · ' + quantity + ' 件的預約已取消，原紀錄保留。']);
   }
-  function rescheduleReservation(recordId, values, userId) {
+  function rescheduleReservation(recordId: string, values: Booking, userId: string) {
     var r = record(recordId);
     if (!r || r.userId !== userId || !canReschedule(r)) { throw validationError('只有尚未領取的預約可以修改。'); }
     if (!validDates(values.start, values.end) || values.end < state.today) { throw validationError('請填寫有效的借還日期，歸還日期須在今天或之後。'); }
@@ -199,11 +197,11 @@
     updateStatus(r);
     event('reschedule', original.id, { reservationId: r.id, before: before, after: { start: r.start, end: r.end, quantity: pending(r) } });
     refreshRequestsForItem(r.itemId);
-    var details = item(r.itemId).name + ' · ' + pending(r) + ' 件，借用日期 ' + reservationStart(r) + '，歸還日期 ' + r.end + '。';
-    sendMail('reschedule', r.userId, '改期確認信｜' + item(r.itemId).name, [r.name + '，你的預約已修改。', details, '請到現場掃碼領取。原預約與這次修改都保留紀錄。'], [], { reservationId: r.id });
+    var details = item(r.itemId)!.name + ' · ' + pending(r) + ' 件，借用日期 ' + reservationStart(r) + '，歸還日期 ' + r.end + '。';
+    sendMail('reschedule', r.userId, '改期確認信｜' + item(r.itemId)!.name, [r.name + '，你的預約已修改。', details, '請到現場掃碼領取。原預約與這次修改都保留紀錄。'], [], { reservationId: r.id });
     return acknowledge('預約已修改', [details, '改期通知已建立，可在「我的通知」查看。']);
   }
-  function affectedReservations(r, newEnd) {
+  function affectedReservations(r: Loan, newEnd: string) {
     var extensionStart = addDays(r.end, 1);
     if (extensionStart > newEnd) { return []; }
     return state.records.filter(function (candidate) {
@@ -213,13 +211,13 @@
       return start <= end && capacity(r.itemId, start, end, [candidate.id], { id: r.id, end: newEnd }) < pending(candidate);
     });
   }
-  function applyExtension(req) {
-    var r = record(req.loanId);
+  function applyExtension(req: Extension) {
+    var r = record(req.loanId)!;
     var previousEnd = r.end;
     r.end = req.newEnd;
     req.status = 'applied';
     req.affected.forEach(function (answer) {
-      var reservation = record(answer.recordId);
+      var reservation = record(answer.recordId)!;
       if (!pending(reservation) || answer.noReplyNeeded || answer.response !== true) { return; }
       var originalStart = reservationStart(reservation);
       if (req.newEnd >= reservation.end) {
@@ -233,17 +231,17 @@
       }
     });
     event('extension_applied', req.id, { loanId: r.id, previousEnd: previousEnd, end: r.end });
-    if (req.affected.length) { sendMail('extension_applied', r.userId, '延長已生效｜' + item(r.itemId).name, [r.name + '，需要回覆的預約者都已同意，或因改期／取消而不再受影響。', item(r.itemId).name + ' 的歸還日期已改為 ' + r.end + '。', '同意且仍受影響的預約，借用日起延至新歸還日的隔天，歸還日不變；若新歸還日已到或超過其歸還日，則保留原日期至原訂歸還日，或由預約者自行改期。'], [], { loanId: r.id }); }
+    if (req.affected.length) { sendMail('extension_applied', r.userId, '延長已生效｜' + item(r.itemId)!.name, [r.name + '，需要回覆的預約者都已同意，或因改期／取消而不再受影響。', item(r.itemId)!.name + ' 的歸還日期已改為 ' + r.end + '。', '同意且仍受影響的預約，借用日起延至新歸還日的隔天，歸還日不變；若新歸還日已到或超過其歸還日，則保留原日期至原訂歸還日，或由預約者自行改期。'], [], { loanId: r.id }); }
   }
-  function requestComplete(req) { return req.affected.every(function (answer) { return answer.response === true || answer.noReplyNeeded; }); }
-  function sendExtensionMail(req, reservation) {
-    var r = record(req.loanId);
-    var outcome = req.newEnd >= reservation.end ? '新歸還日已到或超過你的歸還日。同意後仍保留原預約日期至 ' + reservation.end + '，也可以自行改期；若到期仍未領取，將自動結束預約並寄信通知。' : '生效時，你的借用日期改為 ' + addDays(req.newEnd, 1) + '，歸還日期不變。';
-    sendMail('extension_request', reservation.userId, '延長申請｜' + item(r.itemId).name, [reservation.name + '，' + r.name + ' 希望延長借用 ' + item(r.itemId).name + ' 至 ' + req.newEnd + '。', '你的預約為 ' + reservationStart(reservation) + ' 至 ' + reservation.end + '，共 ' + pending(reservation) + ' 件。這段期間的庫存會不足，需要你的同意。', '所有仍受影響的人都同意後才會生效。' + outcome], ['agree', 'disagree'], { requestId: req.id, reservationId: reservation.id });
+  function requestComplete(req: Extension) { return req.affected.every(function (answer) { return answer.response === true || answer.noReplyNeeded; }); }
+  function sendExtensionMail(req: Extension, reservation: Loan) {
+    var r = record(req.loanId)!;
+    var outcome = req.newEnd >= reservation.end ? '新歸還日已到或超過你的歸還日。同意後仍保留原預約日期至 ' + reservation.end + '，也可以自行改期；若到期仍未領取，將自動結束預約' + (notificationsOnly ? '並建立站內通知。' : '並寄信通知。') : '生效時，你的借用日期改為 ' + addDays(req.newEnd, 1) + '，歸還日期不變。';
+    sendMail('extension_request', reservation.userId, '延長申請｜' + item(r.itemId)!.name, [reservation.name + '，' + r.name + ' 希望延長借用 ' + item(r.itemId)!.name + ' 至 ' + req.newEnd + '。', '你的預約為 ' + reservationStart(reservation) + ' 至 ' + reservation.end + '，共 ' + pending(reservation) + ' 件。這段期間的庫存會不足，需要你的同意。', '所有仍受影響的人都同意後才會生效。' + outcome], ['agree', 'disagree'], { requestId: req.id, reservationId: reservation.id });
   }
-  function refreshRequestsForItem(itemId) {
-    state.requests.filter(function (req) { return req.status === 'pending' && record(req.loanId).itemId === itemId; }).forEach(function (req) {
-      var r = record(req.loanId);
+  function refreshRequestsForItem(itemId: string) {
+    state.requests.filter(function (req) { return req.status === 'pending' && record(req.loanId)!.itemId === itemId; }).forEach(function (req) {
+      var r = record(req.loanId)!;
       if (!held(r)) { cancelRequestsIfReturned(r); return; }
       var affected = affectedReservations(r, req.newEnd);
       req.affected.forEach(function (answer) {
@@ -252,7 +250,7 @@
         answer.noReplyNeeded = !stillAffected;
         if (wasWaived !== answer.noReplyNeeded) {
           event('extension_affected_update', req.id, { reservationId: answer.recordId, noReplyNeeded: answer.noReplyNeeded });
-          if (stillAffected && answer.response === null) { sendExtensionMail(req, record(answer.recordId)); }
+          if (stillAffected && answer.response === null) { sendExtensionMail(req, record(answer.recordId)!); }
         }
       });
       affected.forEach(function (reservation) {
@@ -264,14 +262,14 @@
       if (requestComplete(req)) { applyExtension(req); }
     });
   }
-  function extend(recordId, days) {
+  function extend(recordId: string, days: number) {
     var r = record(recordId);
     if (!r || held(r) < 1) { throw validationError('這筆借用已經歸還，無法延長。'); }
     if (!Number.isSafeInteger(days) || days < 1) { throw validationError('請輸入正整數的延長天數。'); }
     var newEnd = addDays(r.end, days);
     var affected = affectedReservations(r, newEnd);
-    var req = { id: id('req'), loanId: r.id, oldEnd: r.end, newEnd: newEnd, days: days, status: 'pending', affected: affected.map(function (candidate) { return { recordId: candidate.id, response: null }; }) };
-    state.requests.filter(function (previous) { return previous.loanId === r.id && previous.status === 'pending'; }).forEach(function (previous) {
+    var req: Extension = { id: id('req'), loanId: r.id, oldEnd: r.end, newEnd: newEnd, days: days, status: 'pending', affected: affected.map(function (candidate) { return { recordId: candidate.id, response: null }; }) };
+    state.requests.filter(function (previous) { return previous.loanId === r!.id && previous.status === 'pending'; }).forEach(function (previous) {
       previous.status = 'void';
       event('extension_voided', previous.id, { replacementId: req.id });
     });
@@ -279,27 +277,27 @@
     event('extension_request', req.id, { loanId: r.id, days: days, newEnd: newEnd, affected: affected.map(function (candidate) { return candidate.id; }) });
     if (!affected.length) {
       applyExtension(req);
-      return acknowledge('延長已立即生效', [item(r.itemId).name + ' 的新歸還日期為 ' + newEnd + '，沒有影響其他人的預約。']);
+      return acknowledge('延長已立即生效', [item(r.itemId)!.name + ' 的新歸還日期為 ' + newEnd + '，沒有影響其他人的預約。']);
     }
     affected.forEach(function (reservation) {
       sendExtensionMail(req, reservation);
     });
-    return acknowledge('延長申請已建立', ['已建立給 ' + affected.map(function (reservation) { return reservation.name; }).join('、') + ' 的站內通知；設定 SMTP 後也會排程寄信。所有受影響的預約者都同意後才會生效。', '目前有效的歸還日期仍為 ' + r.end + '。']);
+    return acknowledge('延長申請已建立', ['已建立給 ' + affected.map(function (reservation) { return reservation.name; }).join('、') + (notificationsOnly ? ' 的站內通知。' : ' 的站內通知；設定 SMTP 後也會排程寄信。') + '所有受影響的預約者都同意後才會生效。', '目前有效的歸還日期仍為 ' + r.end + '。']);
   }
-  function respondExtension(requestId, reservationId, agree) {
+  function respondExtension(requestId: string, reservationId: string, agree: boolean) {
     var req = state.requests.find(function (entry) { return entry.id === requestId; });
     if (!req || req.status !== 'pending') { return acknowledge('這封信已處理', ['這次延長申請已結束，這個按鈕不會重複變更紀錄。']); }
     var answer = req.affected.find(function (entry) { return entry.recordId === reservationId; });
     if (!answer || answer.response !== null || answer.noReplyNeeded) { return acknowledge('這個回覆已處理', ['你已回覆，或已不再受影響，這個按鈕不會重複變更紀錄。']); }
-    var r = record(req.loanId);
+    var r = record(req.loanId)!;
     if (!held(r)) { cancelRequestsIfReturned(r); return acknowledge('延長申請已取消', ['物品已歸還，不再需要回覆。']); }
     answer.response = agree;
     event(agree ? 'extension_agree' : 'extension_disagree', req.id, { reservationId: reservationId });
-    var reservation = record(reservationId);
+    var reservation = record(reservationId)!;
     if (!agree) {
       req.status = 'denied';
-      sendMail('communication', r.userId, '請兩人溝通｜' + item(r.itemId).name, [reservation.name + ' 未同意延長。歸還日期仍為 ' + r.end + '。', '請聯絡 ' + contact(reservation.userId) + '，一起協調借用時間。'], [], { requestId: req.id });
-      sendMail('communication', reservation.userId, '請兩人溝通｜' + item(r.itemId).name, ['你已選擇不同意延長，原歸還日期維持不變。', '請聯絡 ' + contact(r.userId) + '，一起協調借用時間。'], [], { requestId: req.id });
+      sendMail('communication', r.userId, '請兩人溝通｜' + item(r.itemId)!.name, [reservation.name + ' 未同意延長。歸還日期仍為 ' + r.end + '。', '請聯絡 ' + contact(reservation.userId) + '，一起協調借用時間。'], [], { requestId: req.id });
+      sendMail('communication', reservation.userId, '請兩人溝通｜' + item(r.itemId)!.name, ['你已選擇不同意延長，原歸還日期維持不變。', '請聯絡 ' + contact(r.userId) + '，一起協調借用時間。'], [], { requestId: req.id });
       return acknowledge('已回覆不同意', ['延長不生效。系統已建立給雙方的通知，附有對方的姓名與 Email，請兩人溝通。']);
     }
     if (requestComplete(req)) {
@@ -308,12 +306,12 @@
     }
     return acknowledge('已記錄同意', ['你的回覆已記錄，仍需其他受影響的預約者同意。生效前日期維持不變。']);
   }
-  function sendHandover(recordId, allocations) {
-    var r = record(recordId);
+  function sendHandover(recordId: string, allocations: Allocation[]) {
+    const r = record(recordId);
     if (!r || !held(r) || !allocations.length) { throw validationError('請選擇轉交對象與件數。'); }
     var allowed = futureReservations(r);
     var total = 0;
-    var seen = [];
+    var seen: string[] = [];
     allocations.forEach(function (allocation) {
       var reservation = allowed.find(function (candidate) { return candidate.id === allocation.recordId; });
       if (!reservation || seen.indexOf(reservation.id) >= 0 || !Number.isSafeInteger(allocation.quantity) || allocation.quantity < 1 || allocation.quantity > Math.min(pending(reservation), held(r))) { throw validationError('轉交件數須在對方預約件數與你持有的件數範圍內。'); }
@@ -322,23 +320,23 @@
     });
     if (total > held(r)) { throw validationError('轉交總件數不能超過你手上的 ' + held(r) + ' 件。'); }
     allocations.forEach(function (allocation) {
-      var reservation = record(allocation.recordId);
+      var reservation = record(allocation.recordId)!;
       var handover = { id: id('handover'), loanId: r.id, reservationId: reservation.id, quantity: allocation.quantity, status: 'pending' };
       state.handovers.push(handover);
       event('handover_sent', handover.id, { loanId: r.id, reservationId: reservation.id, quantity: allocation.quantity });
-      sendMail('handover', reservation.userId, '轉交確認｜' + item(r.itemId).name, [reservation.name + '，' + r.name + ' 要直接轉交 ' + item(r.itemId).name + ' · ' + allocation.quantity + ' 件給你。', '實際收到後，請按「確認收到」，就會同時記錄你的領取與對方的歸還。你的歸還日期仍為 ' + reservation.end + '。', '未轉交的件數仍須到現場掃碼領取，沿用原預約借用日 ' + reservationStart(reservation) + ' 的領取期限，不會改用確認收到日計算。'], ['received', 'reject'], { handoverId: handover.id });
+      sendMail('handover', reservation.userId, '轉交確認｜' + item(r.itemId)!.name, [reservation.name + '，' + r.name + ' 要直接轉交 ' + item(r.itemId)!.name + ' · ' + allocation.quantity + ' 件給你。', '實際收到後，請按「確認收到」，就會同時記錄你的領取與對方的歸還。你的歸還日期仍為 ' + reservation.end + '。', '未轉交的件數仍須到現場掃碼領取，沿用原預約借用日 ' + reservationStart(reservation) + ' 的領取期限，不會改用確認收到日計算。'], ['received', 'reject'], { handoverId: handover.id });
     });
-    return acknowledge('轉交通知已建立', ['已建立給 ' + allocations.map(function (allocation) { return record(allocation.recordId).name + ' · ' + allocation.quantity + ' 件'; }).join('、') + ' 的站內通知；設定 SMTP 後也會排程寄信。', '對方確認收到前，物品仍算在原借用人身上，原有提醒與預約取消規則繼續適用。']);
+    return acknowledge('轉交通知已建立', ['已建立給 ' + allocations.map(function (allocation) { return record(allocation.recordId)!.name + ' · ' + allocation.quantity + ' 件'; }).join('、') + (notificationsOnly ? ' 的站內通知。' : ' 的站內通知；設定 SMTP 後也會排程寄信。'), '對方確認收到前，物品仍算在原借用人身上，原有提醒與預約取消規則繼續適用。']);
   }
-  function respondHandover(handoverId, receive) {
+  function respondHandover(handoverId: string, receive: boolean) {
     var handover = state.handovers.find(function (entry) { return entry.id === handoverId; });
     if (!handover || handover.status !== 'pending') { return acknowledge('這封信已處理', ['這次轉交已有結果，不會重複領取或歸還。']); }
-    var r = record(handover.loanId);
-    var reservation = record(handover.reservationId);
+    var r = record(handover.loanId)!;
+    var reservation = record(handover.reservationId)!;
     if (!receive) {
       handover.status = 'rejected';
       event('handover_rejected', handover.id, { quantity: handover.quantity });
-      sendMail('handover_rejected', r.userId, '轉交被拒絕｜' + item(r.itemId).name, [reservation.name + ' 拒絕這次 ' + handover.quantity + ' 件的轉交。', '物品仍算在你手上，請依原訂日期 ' + r.end + ' 歸還。'], [], { handoverId: handover.id });
+      sendMail('handover_rejected', r.userId, '轉交被拒絕｜' + item(r.itemId)!.name, [reservation.name + ' 拒絕這次 ' + handover.quantity + ' 件的轉交。', '物品仍算在你手上，請依原訂日期 ' + r.end + ' 歸還。'], [], { handoverId: handover.id });
       return acknowledge('已拒絕轉交', ['已建立給原借用人的通知，物品仍算在對方身上。']);
     }
     if (held(r) < handover.quantity || pending(reservation) < handover.quantity || reservation.end < state.today) { throw validationError('目前可轉交或可領取的件數已變更，這封信無法完成確認。'); }
@@ -354,11 +352,11 @@
     event('return', r.id, { quantity: handover.quantity, source: 'handover' });
     event('pickup', reservation.id, { quantity: handover.quantity, source: 'handover', previousStart: previousStart, start: state.today });
     cancelRequestsIfReturned(r);
-    return acknowledge('已確認收到', [item(r.itemId).name + ' · ' + handover.quantity + ' 件已算作你領取、原借用人歸還。', '這次收到的部分從 ' + state.today + ' 開始借用，歸還日期仍為 ' + reservation.end + '。', pending(reservation) ? '還有 ' + pending(reservation) + ' 件要到現場掃碼領取，沿用原預約借用日 ' + reservationStart(reservation) + '，最晚領取日為 ' + pickupDeadline(reservation) + '。' : '這筆預約已全數領取。']);
+    return acknowledge('已確認收到', [item(r.itemId)!.name + ' · ' + handover.quantity + ' 件已算作你領取、原借用人歸還。', '這次收到的部分從 ' + state.today + ' 開始借用，歸還日期仍為 ' + reservation.end + '。', pending(reservation) ? '還有 ' + pending(reservation) + ' 件要到現場掃碼領取，沿用原預約借用日 ' + reservationStart(reservation) + '，最晚領取日為 ' + pickupDeadline(reservation) + '。' : '這筆預約已全數領取。']);
   }
-  function daily(day) {
+  function daily(day: string) {
     state.today = day;
-    var changedItems = [];
+    var changedItems: string[] = [];
     state.records.forEach(function (r) {
       if (pending(r) && day > pickupDeadline(r)) {
         var quantity = pending(r);
@@ -368,7 +366,7 @@
         event('auto_cancel', r.id, { quantity: quantity, reason: r.keepUntilEnd ? 'extension_past_end' : 'pickup_deadline' });
         changedItems.push(r.itemId);
         var explanation = r.keepUntilEnd ? '因前一位延長後的新歸還日已到或超過你的原訂歸還日，預約保留原日期至 ' + r.end + '。截至該日仍未領取、也未自行改期，已在今日早上的排程自動結束這些件數。' : '原預約借用日期為 ' + reservationStart(r) + '，至隔天仍未領取，已在今日早上的排程自動取消這些件數。';
-        sendMail('auto_cancel', r.userId, '預約已自動取消｜' + item(r.itemId).name, [r.name + '，你的 ' + item(r.itemId).name + ' 預約有 ' + quantity + ' 件未領取。', explanation + '原紀錄保留。'], [], { loanId: r.id });
+        sendMail('auto_cancel', r.userId, '預約已自動取消｜' + item(r.itemId)!.name, [r.name + '，你的 ' + item(r.itemId)!.name + ' 預約有 ' + quantity + ' 件未領取。', explanation + '原紀錄保留。'], [], { loanId: r.id });
       }
     });
     changedItems.filter(function (value, index, values) { return values.indexOf(value) === index; }).forEach(refreshRequestsForItem);
@@ -376,22 +374,22 @@
       if (held(r) > 0 && r.end <= day && !state.mails.some(function (message) { return message.type === 'reminder' && message.refs.loanId === r.id && message.date === day; })) {
         var next = futureReservations(r)[0];
         var overdue = daysBetween(r.end, day);
-        var paragraphs = [r.name + '，你借用的 ' + item(r.itemId).name + ' · ' + held(r) + ' 件，歸還日期為 ' + r.end + (overdue ? '，目前已逾期 ' + overdue + ' 天。' : '，今天到期。'), '請到現場掃碼歸還，也可以按下方按鈕延長借用。'];
+        var paragraphs = [r.name + '，你借用的 ' + item(r.itemId)!.name + ' · ' + held(r) + ' 件，歸還日期為 ' + r.end + (overdue ? '，目前已逾期 ' + overdue + ' 天。' : '，今天到期。'), '請到現場掃碼歸還，也可以按下方按鈕延長借用。'];
         if (next) { paragraphs.push('下一位是 ' + contact(next.userId) + '，預約 ' + reservationStart(next) + ' 至 ' + next.end + ' · ' + pending(next) + ' 件。可以聯絡對方直接轉交。'); }
-        sendMail('reminder', r.userId, (overdue ? '逾期提醒' : '到期提醒') + '｜' + item(r.itemId).name, paragraphs, next ? ['extend', 'handover'] : ['extend'], { loanId: r.id });
+        sendMail('reminder', r.userId, (overdue ? '逾期提醒' : '到期提醒') + '｜' + item(r.itemId)!.name, paragraphs, next ? ['extend', 'handover'] : ['extend'], { loanId: r.id });
       }
     });
     state.requests.filter(function (req) { return req.status === 'pending'; }).forEach(function (req) {
-      var r = record(req.loanId);
+      var r = record(req.loanId)!;
       if (!held(r)) { cancelRequestsIfReturned(r); return; }
       var unanswered = req.affected.filter(function (entry) { return entry.response === null && !entry.noReplyNeeded; });
       if (!unanswered.length || state.mails.some(function (message) { return message.type === 'nudge_borrower' && message.refs.requestId === req.id && message.date === day; })) { return; }
-      sendMail('nudge_borrower', r.userId, '延長回覆提醒｜' + item(r.itemId).name, ['還有 ' + unanswered.map(function (entry) { return contact(record(entry.recordId).userId); }).join('、') + ' 未回覆你的延長申請，請主動聯絡。', '目前歸還日期仍為 ' + r.end + '。'], [], { requestId: req.id });
+      sendMail('nudge_borrower', r.userId, '延長回覆提醒｜' + item(r.itemId)!.name, ['還有 ' + unanswered.map(function (entry) { return contact(record(entry.recordId)!.userId); }).join('、') + ' 未回覆你的延長申請，請主動聯絡。', '目前歸還日期仍為 ' + r.end + '。'], [], { requestId: req.id });
       unanswered.forEach(function (entry) {
-        var reservation = record(entry.recordId);
-        sendMail('nudge_holder', reservation.userId, '請回覆延長申請｜' + item(r.itemId).name, [reservation.name + '，' + r.name + ' 申請延長至 ' + req.newEnd + '，仍在等候你的回覆。', '請選擇同意或不同意。所有人同意才會生效，原訂歸還日期不變。'], ['agree', 'disagree'], { requestId: req.id, reservationId: reservation.id });
+        var reservation = record(entry.recordId)!;
+        sendMail('nudge_holder', reservation.userId, '請回覆延長申請｜' + item(r.itemId)!.name, [reservation.name + '，' + r.name + ' 申請延長至 ' + req.newEnd + '，仍在等候你的回覆。', '請選擇同意或不同意。所有人同意才會生效，原訂歸還日期不變。'], ['agree', 'disagree'], { requestId: req.id, reservationId: reservation.id });
       });
     });
   }
   return { data: data, state: state, updateAssetNumber: updateAssetNumber, searchItems: searchItems, id: id, person: person, item: item, unit: unit, record: record, held: held, pending: pending, reservationStart: reservationStart, pickupDeadline: pickupDeadline, awaitingToday: awaitingToday, remaining: remaining, rescheduleCapacity: rescheduleCapacity, canReschedule: canReschedule, rescheduleReservation: rescheduleReservation, displayDates: displayDates, daysBetween: daysBetween, addDays: addDays, validDates: validDates, capacity: capacity, outToday: outToday, futureReservations: futureReservations, makeBorrow: makeBorrow, pickupAvailability: pickupAvailability, pickup: pickup, returnQuantity: returnQuantity, cancelReservation: cancelReservation, affectedReservations: affectedReservations, extend: extend, respondExtension: respondExtension, sendHandover: sendHandover, respondHandover: respondHandover, daily: daily, acknowledge: acknowledge };
-}));
+}

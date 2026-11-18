@@ -9,3 +9,7 @@ data/
 coverage/
 test-results/
 .DS_Store
+
+/dist/
+/dist-demo/
+*.tsbuildinfo

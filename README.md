@@ -26,14 +26,32 @@ docker compose down           # 停止，保留 SQLite volume
 
 ## 本機開發
 
+在專案根目錄使用 Node.js 24.15 以上。首次開發時，若還沒有 `.env`，先從範本建立。
+
 ```bash
 cp .env.example .env
-# 編輯 .env，設定自己的管理者 Email 與至少 12 字元密碼
+```
+
+編輯 `.env`，設定管理者的 `ADMIN_EMAIL`，將 `ADMIN_PASSWORD` 換成 12 至 128 字元的自訂密碼，並加上 `HOST=127.0.0.1`，讓開發伺服器只接受本機連線。接著安裝依賴並啟動。
+
+```bash
 npm ci
 npm run dev
 ```
 
-正式啟動用 `npm start`，測試用 `npm test`。資料預設位於 `data/ezstorage.sqlite`，可透過 `DATABASE_PATH` 更改。第一次啟動建立一間空白房間，請管理者新增儲存處與物品。若是試用，可在首次啟動前設定 `SEED_DEMO=true` 載入示範房間與教具；已初始化的資料不會被重設，也不建立虛構借用人或借用紀錄。
+開啟 <http://localhost:3000>，用 `.env` 中的管理者帳密登入。之後開發可直接執行 `npm run dev`。修改 `server/` 的後端程式時，Node 會自動重啟。修改前端檔案後，執行 `npm run build` 更新 `dist/`，再重新整理瀏覽器。
+
+若首次啟動出現 `.env not found` 或密碼錯誤，請確認 `.env` 位於專案根目錄，且 `ADMIN_PASSWORD` 已換掉範例值。`ADMIN_PASSWORD` 只在首次建立管理者時使用。帳號建立後，登入使用 SQLite 裡儲存的密碼。要更換密碼，請依照下方的[密碼重設步驟](#帳號建立與密碼重設)。
+
+正式啟動先執行 `npm run build`，再執行 `npm start`。型別檢查用 `npm run typecheck`，測試用 `npm test`。資料預設位於 `data/ezstorage.sqlite`，可透過 `DATABASE_PATH` 更改。第一次啟動建立一間空白房間，請管理者新增儲存處與物品。若是試用，可在首次啟動前設定 `SEED_DEMO=true` 載入示範房間與教具；已初始化的資料不會被重設，也不建立虛構借用人或借用紀錄。
+
+## GitHub Pages 靜態示範
+
+執行 `npm run build:demo` 會產生 `dist-demo/`。可用靜態伺服器在 `/EzStorage/` 路徑提供該目錄。資源以相對路徑載入，QR Code 連結包含目前的站台路徑。
+
+示範第一次開啟時會登入示範管理者。切換帳號請登出後使用登入畫面提供的帳密，也可以自行註冊。變更儲存在目前瀏覽器的 localStorage，頁尾的「重置 Demo 資料」會還原該站台的示範資料。示範只建立站內通知，並在使用網頁時補處理每日提醒。
+
+在 GitHub 儲存庫的 **Settings → Pages → Source** 選擇 **GitHub Actions**。推送至 `main` 或手動執行 `GitHub Pages` 工作流程時，型別檢查和測試通過後才會部署靜態示範。
 
 ## 帳號建立與密碼重設
 
@@ -42,11 +60,13 @@ npm run dev
 ```bash
 read -rs -p '新密碼（至少 12 字元）: ' EZSTORAGE_USER_PASSWORD; echo
 export EZSTORAGE_USER_PASSWORD
-docker compose exec -T -e EZSTORAGE_USER_PASSWORD ezstorage node scripts/user.cjs create colleague@example.com '同事姓名'
+docker compose exec -T -e EZSTORAGE_USER_PASSWORD ezstorage node scripts/user.ts create colleague@example.com '同事姓名'
 unset EZSTORAGE_USER_PASSWORD
 ```
 
-重設現有帳號時，把 `create colleague@example.com '同事姓名'` 改成 `reset colleague@example.com`；既有登入工作階段會失效。本機 Node 部署可改用 `node --env-file-if-exists=.env scripts/user.cjs create EMAIL NAME`。
+重設現有帳號（包含管理者）時，把 `create colleague@example.com '同事姓名'` 改成 `reset EMAIL`，並填入該帳號的 Email。重設後，既有登入工作階段會失效。
+
+本機 Node 開發可沿用上方的密碼輸入步驟，將 Docker 指令換成 `node --env-file-if-exists=.env scripts/user.ts create EMAIL NAME`（建立帳號）或 `node --env-file-if-exists=.env scripts/user.ts reset EMAIL`（重設密碼）。
 
 確定要讓所有能連到網站的人自行建立借用人帳號時，才在 `.env` 設定 `ALLOW_REGISTRATION=true` 並重新啟動。註冊不會授予管理者權限。
 

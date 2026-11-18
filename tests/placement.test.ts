@@ -1,6 +1,6 @@
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { boundedTransform, transformedUnits } = require('../prototype/room3d.js');
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { boundedTransform, transformedUnits } from '../prototype/room3d.ts';
 
 test('drag bounds account for the rotated footprint', () => {
   const unit = { x: 0, z: 0, rotation: 0, w: 4, d: 2 };

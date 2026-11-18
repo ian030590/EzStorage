@@ -1,5 +1,5 @@
 'use strict';
-const { createApp } = require('./app');
+import { createApp } from './app.ts';
 const app = createApp();
 const server = app.listen(Number(process.env.PORT || 3000), process.env.HOST || '0.0.0.0', () => {
   console.log(`EzStorage ready at http://localhost:${process.env.PORT || 3000}`);

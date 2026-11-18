@@ -9,3 +9,7 @@ tests
 .agents
 .codex
 .aws
+dist
+dist-demo
+*.tsbuildinfo
+prototype/.review

@@ -145,9 +145,10 @@
     units.forEach(function (u, index) {
       var button = document.createElement('button');
       button.type = 'button';
-      button.className = 'unit-tag';
+      var overdue = !!window.EZ && window.EZ.state.records.some(function (r) { var item = window.EZ.item(r.itemId); return item && item.unit === u.code && window.EZ.held(r) > 0 && r.end < window.EZ.state.today; });
+      button.className = 'unit-tag' + (overdue ? ' overdue' : '');
       button.textContent = u.code;
-      button.setAttribute('aria-label', (u.name || u.code) + ' ' + window.EZData.types[u.type]);
+      button.setAttribute('aria-label', (u.name || u.code) + ' ' + window.EZData.types[u.type] + (overdue ? '，有逾期未還' : ''));
       button.setAttribute('aria-pressed', 'false');
       button.addEventListener('click', function () { selectFromTag(u.code); });
       button.style.left = (20 + (index % 3) * 28) + '%';

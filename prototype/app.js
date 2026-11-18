@@ -6,6 +6,7 @@
   var busy = false;
   var registrationEnabled = false;
   var revision;
+  var receiptRooms = {};
   async function request(path, method, body) {
     var response = await fetch(path, { method: method || 'GET', headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
     var value = await response.json();
@@ -23,7 +24,13 @@
     window.EZData = data;
     ['makeBorrow', 'pickup', 'returnQuantity', 'cancelReservation', 'rescheduleReservation', 'extend', 'respondExtension', 'sendHandover', 'respondHandover'].forEach(function (action) {
       E[action] = async function () {
-        var value = await request('/api/actions', 'POST', { action: action, args: Array.from(arguments) });
+        var args = Array.from(arguments);
+        var related = action === 'respondExtension' ? E.state.requests.find(function (r) { return r.id === args[0]; }) : action === 'respondHandover' ? E.state.handovers.find(function (r) { return r.id === args[0]; }) : null;
+        var record = E.state.records.find(function (r) { return r.id === (related ? related.loanId : args[0]); });
+        var inventory = action === 'makeBorrow' ? E.item(args[2][0] && args[2][0].itemId) : record ? E.item(record.itemId) : null;
+        var unit = inventory ? E.unit(inventory.unit) : null;
+        var value = await request('/api/actions', 'POST', { action: action, args: args });
+        if (value.result && unit) { receiptRooms[value.result.id] = unit.room; }
         applySnapshot(value);
         return value.result;
       };
@@ -196,7 +203,7 @@
     var out = E.outToday(inventory.id);
     function borrowerRow(r, quantity, start, waiting) {
       var days = E.daysBetween(E.state.today, r.end);
-      return '<div class="borrower-row"><span>' + escape(r.name) + ' · <span class="num">' + quantity + '</span> 件' + (waiting ? '（待領取）' : '') + '</span>' + dateRange(r, start) + '<span class="num days' + (days < 0 ? ' late' : '') + '" aria-label="距離歸還 ' + days + ' 天">' + days + '</span></div>';
+      return '<div class="borrower-row"><span>' + escape(r.name) + ' · <span class="num">' + quantity + '</span> 件' + (waiting ? '（待領取）' : '') + '</span>' + dateRange(r, start) + '<span class="num days' + (days < 0 ? ' late' : '') + '" aria-label="距離歸還 ' + days + ' 天">' + days + ' 天</span></div>';
     }
     return '<article class="inventory-item" data-inventory="' + inventory.id + '" tabindex="-1" aria-label="' + escape(inventory.name) + '"><div class="item-image" role="img" aria-label="' + escape(inventory.name + '，示範插圖；' + out + ' 件已領取或今天待領取') + '">' + inventory.image + '<div class="dark" style="height:' + Math.min(100, out / inventory.total * 100) + '%"></div></div><div class="item-info"><h3>' + escape(inventory.name) + '<span class="remaining num">' + E.remaining(inventory.id) + ' <small>/ ' + inventory.total + ' 剩餘</small></span></h3><div class="asset-details">' + assetDetails(inventory) + '</div>' + (current.length ? current.map(function (r) {
       return (E.held(r) ? borrowerRow(r, E.held(r), r.start, false) : '') + (E.awaitingToday(r) ? borrowerRow(r, E.awaitingToday(r), E.reservationStart(r), true) : '');
@@ -514,7 +521,11 @@
     if (!requireLogin()) { return; }
     if (action === 'borrow') { renderBorrow(context.unit, 'scan', context.prechecked); return; }
     if (action === 'pickup' || action === 'return') { renderOnSite(context, action); return; }
-    page(context.unit.code + ' ' + data.types[context.unit.type], '已掃描' + (context.prechecked ? '物品：' + E.item(context.prechecked).name : '儲存處') + '，請選擇這次的操作。', '<div class="scan-choices">' + [{ action: 'borrow', title: '借用／預約', hint: '選擇物品、件數與借還日期。' }, { action: 'pickup', title: '領取', hint: '確認領取自己的預約。' }, { action: 'return', title: '歸還', hint: '填寫這次歸還的件數。' }].map(function (choice) { return '<button type="button" class="scan-choice" data-scan-action="' + choice.action + '">' + icon(choice.action) + '<span><strong>' + choice.title + '</strong><small>' + choice.hint + '</small></span></button>'; }).join('') + '</div>', true);
+    var counts = { pickup: 0, return: 0 };
+    E.state.records.forEach(function (r) {
+      if (r.userId === E.state.user.id && E.item(r.itemId).unit === context.unit.code) { counts.pickup += E.pending(r); counts.return += E.held(r); }
+    });
+    page(context.unit.code + ' ' + data.types[context.unit.type], '已掃描' + (context.prechecked ? '物品：' + E.item(context.prechecked).name : '儲存處') + '，請選擇這次的操作。', '<div class="scan-choices">' + [{ action: 'borrow', title: '借用／預約', hint: '選擇物品、件數與借還日期。' }, { action: 'pickup', title: '領取', hint: '確認領取自己的預約。' + (counts.pickup ? '你有 ' + counts.pickup + ' 件待領取' : '目前沒有') }, { action: 'return', title: '歸還', hint: '填寫這次歸還的件數。' + (counts.return ? '你有 ' + counts.return + ' 件尚未歸還' : '目前沒有') }].map(function (choice) { return '<button type="button" class="scan-choice" data-scan-action="' + choice.action + '">' + icon(choice.action) + '<span><strong>' + choice.title + '</strong><small>' + choice.hint + '</small></span></button>'; }).join('') + '</div>', true);
     app.querySelectorAll('[data-scan-action]').forEach(function (button) { button.addEventListener('click', function () { go(context.base + '/' + button.dataset.scanAction); }); });
   }
   function renderBorrow(u, source, prechecked) {
@@ -598,7 +609,14 @@
       }).join('');
       return '<article class="record"><div class="record-heading"><h2>' + escape(inventory.name) + '</h2><span>' + label + '</span></div><div class="record-details"><span class="num">' + inventory.unit + '</span>' + dateRange(r) + (active ? '<span class="' + (days < 0 ? 'late' : '') + '">距離歸還 <b class="num">' + days + '</b> 天</span>' : '') + (r.returned ? '<span>已歸還 <span class="num">' + r.returned + '</span> 件</span>' : '') + (r.cancelled ? '<span>已取消 <span class="num">' + r.cancelled + '</span> 件</span>' : '') + '</div>' + applicant + replies + (active ? '<p class="hint">請到現場掃碼歸還</p><div class="record-actions"><a class="button secondary" href="#/extend/' + r.id + '">申請延長</a>' + (E.futureReservations(r).length ? '<a class="button secondary" href="#/handover/' + r.id + '">直接轉交</a>' : '') + '</div>' : '') + (reserved ? '<p class="hint">請到現場掃碼領取' + (active ? '剩下的 ' + E.pending(r) + ' 件，原預約起日 ' + shortDate(E.reservationStart(r)) : '') + (r.keepUntilEnd ? '；預約保留至原訂歸還日 ' + shortDate(r.end) : '') + '</p>' + (E.canReschedule(r) ? '<div class="record-actions"><a class="button secondary" href="#/reschedule/' + r.id + '">修改預約</a></div>' : '') + '<div class="cancel-isolation"><button class="text-button" data-cancel="' + r.id + '">取消預約</button></div>' : '') + '</article>';
     }).join('') + '</div>' : '<p class="empty-state">這個帳號還沒有借用或預約。</p>') + '<p id="form-error" class="form-error" hidden></p>');
-    app.querySelectorAll('[data-cancel]').forEach(function (button) { button.addEventListener('click', function () { handle(function () { return E.cancelReservation(button.dataset.cancel, E.state.user.id); }); }); });
+    app.querySelectorAll('[data-cancel]').forEach(function (button) { button.addEventListener('click', function () {
+      var isolation = button.parentNode;
+      isolation.innerHTML = '<p>確定取消這筆預約？</p><div class="record-actions"><button type="button" class="button" data-confirm-cancel>確定取消</button><button type="button" class="button secondary" data-keep-reservation>保留預約</button></div>';
+      var confirm = isolation.querySelector('[data-confirm-cancel]');
+      confirm.addEventListener('click', function () { handle(function () { return E.cancelReservation(button.dataset.cancel, E.state.user.id); }); });
+      isolation.querySelector('[data-keep-reservation]').addEventListener('click', function () { isolation.replaceChildren(button); button.focus(); });
+      confirm.focus();
+    }); });
     app.querySelectorAll('[data-extension-reply]').forEach(function (button) { button.addEventListener('click', function () { handle(function () { return E.respondExtension(button.dataset.request, button.dataset.reservation, button.dataset.extensionReply === 'agree'); }); }); });
   }
   function renderReschedule(recordId) {
@@ -716,7 +734,7 @@
   function renderResult(key) {
     var receipt = E.state.receipts.find(function (r) { return r.id === key; });
     if (!receipt) { renderNotFound(); return; }
-    page(receipt.title, '', '<div class="result">' + receipt.paragraphs.map(function (paragraph) { return '<p>' + escape(paragraph) + '</p>'; }).join('') + '</div>', true);
+    page(receipt.title, '', '<div class="result">' + receipt.paragraphs.map(function (paragraph) { return '<p>' + escape(paragraph) + '</p>'; }).join('') + '<a class="button" href="#/room/' + escape(receiptRooms[receipt.id] || '1') + '">回到房間</a></div>', true);
   }
   function renderQR() {
     var entries = data.units.map(function (u) { return { code: u.code, name: data.types[u.type], route: '#/scan/unit/' + u.code }; }).concat(data.items.map(function (i) { return { code: i.code, name: i.name, route: '#/scan/item/' + i.id }; }));

@@ -179,7 +179,7 @@ The palette resembles a cool drafting sheet marked with blue ink, yellow highlig
 
 ### Tertiary
 
-- **Redline Red** (`red`): overdue negative day counts and form or action errors. It is an exception signal, not a decorative accent.
+- **Redline Red** (`red`): overdue negative day counts, the ring on storage tags that hold overdue items, and form or action errors. It is an exception signal, not a decorative accent.
 
 ### Neutral
 
@@ -269,7 +269,7 @@ Quiet, compact controls with a clear blue action hierarchy.
 - **Primary:** blue fill and border, white text, small corners, padding (9px 17px), and minimum height (44px). Enabled native buttons darken on hover; link actions share the resting appearance but have no separately authored hover fill.
 - **Secondary:** white fill, blue text and border, the same shape and padding; enabled native buttons hover to the cool ground.
 - **Panel action:** compact text (13px), padding (10px 14px), and right alignment in the panel heading; small phones reduce its padding to (9px 10px).
-- **Text action:** blue underlined text with underline offset (4px), padding (10px 0), and minimum height (44px). The cancellation action sits alone after a divider, with top margin (18px) and top padding (24px).
+- **Text action:** blue underlined text with underline offset (4px), padding (10px 0), and minimum height (44px). The cancellation action sits alone after a divider, with top margin (18px) and top padding (24px). Pressing it swaps it in place for the question 確定取消這筆預約？ with a primary 確定取消 and a secondary 保留預約, with no modal; focus moves to the first of them, and 保留預約 restores the original button and its focus.
 - **Sign-in:** a transparent, white-outlined control on the blue bar, minimum height (36px) on desktop and (44px) on phones; hover adds a translucent white wash (`#ffffff18`).
 - **Focus / disabled:** interactive controls use the keyboard halo. The base disabled-button treatment uses muted text, cool ground, a light rule border, and the not-allowed cursor.
 
@@ -278,6 +278,7 @@ Quiet, compact controls with a clear blue action hierarchy.
 Storage identifiers drawn as architectural annotations, not status chips.
 
 - **Default:** white circle (36px), ink outline (1.4px), and condensed semibold code (16px), attached to its unit with an ink leader line and endpoint dot.
+- **Overdue:** a unit holding an item past its return date gets a red outline (`red`, 1.4px border plus a 2px outline offset by 2px); on phones the same ring is drawn on the circle. Keyboard focus replaces it with the yellow outline and ink halo, and the tag's accessible label adds 有逾期未還. It is a ring, not a badge or extra element.
 - **Selected / hover:** selected tags invert to ink with yellow lettering; hover turns the visible circle yellow with ink lettering. Selection is also exposed through `aria-pressed`.
 - **Phone:** a transparent target (44px) contains the smaller outlined circle (30px) with code text (14px). Tag placement avoids overlap; the visible circle and the hit area are deliberately different sizes.
 - **Panel identifier:** ink circle (44px) with yellow bold code (16px); it reduces to (40px) on small phones.
@@ -288,7 +289,7 @@ White ruled records rather than floating cards.
 
 - **Record rows:** square white surfaces with a bottom hairline and padding (22px 24px), reducing to (20px 16px) on phones. Metadata wraps and actions use a separate spaced row.
 - **Form rows:** white surfaces separated by hairlines, with padding (18px 20px), reducing to (16px) on phones.
-- **Result surfaces:** a stronger ink top border and light bottom rule, with padding (28px); narrow layouts use (22px 18px).
+- **Result surfaces:** a stronger ink top border and light bottom rule, with padding (28px); narrow layouts use (22px 18px). A single 回到房間 primary action under the message returns to the relevant room.
 - **Dialog:** white surface, thin ink border, small corners, padding (28px), width (440px), and maximum width `calc(100vw - 32px)`. A plain SVG close control sits at the upper right.
 - **Depth:** use the flat surface treatment described in Elevation & Depth.
 
@@ -304,7 +305,7 @@ Plain, readable fields with explicit labels and a strong focus treatment.
 
 ### Navigation
 
-The continuous blue service bar retains the room context and all-room search. Desktop room links expose `aria-current="page"`; mobile uses a labelled native room picker. A native details menu groups QR printing, numbering rules, management and personal borrowing. The account button remains directly available. Secondary links are (44px) targets; Escape dismisses the service menu. The selected room uses the original yellow underline on desktop.
+The continuous blue service bar retains the room context and all-room search. Desktop room links expose `aria-current="page"`; mobile uses a labelled native room picker. A native details menu groups QR printing, numbering rules and management. 我的借用 is its own always-visible link before the account button, as is the account button itself. Secondary links are (44px) targets; Escape dismisses the service menu. The selected room uses the original yellow underline on desktop.
 
 ### Inventory Rows and Layer Bands
 
@@ -312,7 +313,7 @@ Compact evidence of what is available and who holds the rest.
 
 - **Layer band:** a compact text control and condensed layer code sit above a light divider, with padding (14px 0 8px). The selected or hovered control turns ink and bold; its minimum height grows from (24px) on desktop to (44px) on phones.
 - **Item row:** square image (96px) beside flexible text, with gap (16px), vertical padding (14px), and a light bottom rule. Phone gaps shrink to (12px).
-- **Availability:** image-darkening grows downward in proportion to the share already out or awaiting pickup today. Remaining and total figures sit beside the item name. Borrower rows align a name, date range, and bold day count; overdue values keep their minus sign and turn red. Upcoming reservations use muted text.
+- **Availability:** image-darkening grows downward in proportion to the share already out or awaiting pickup today. Remaining and total figures sit beside the item name. Borrower rows align a name, date range, and bold day count with its unit (13 天, 0 天, -2 天), in a column sized to its content; overdue values keep their minus sign and turn red. Upcoming reservations use muted text.
 - **Room selection:** selected exterior faces turn yellow while interiors stay blue-grey; choosing a layer adds the deeper ochre accent and scopes the panel. Doors swing, drawers slide, and box lids lift. Keynote buttons provide the parallel keyboard-accessible selection control.
 - **Title block:** a small, ruled white block at the drawing stage's lower left groups the room name and date; it stays within the drawing surface.
 
@@ -328,7 +329,7 @@ Compact evidence of what is available and who holds the rest.
 Large, flat rows for the three on-site actions.
 
 - **Shape / spacing:** square white rows with thin grey boundaries, padding (22px), gap (18px), and minimum height (96px).
-- **Type / icon:** bold action name (18px), supporting copy (14px), and an outlined inline SVG icon (28px).
+- **Type / icon:** bold action name (18px), supporting copy (14px), and an outlined inline SVG icon (28px). The pickup and return rows end their supporting copy with the signed-in user's count at this unit (你有 2 件待領取, 你有 1 件尚未歸還, or 目前沒有); the rows stay selectable.
 - **State:** hover uses Hover Plane; keyboard focus uses the shared yellow outline and ink halo.
 
 ## Do's and Don'ts

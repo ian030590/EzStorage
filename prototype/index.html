@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173F8A">
+  <title>EzStorage 教具借用</title>
+  <link href="styles.css" rel="stylesheet">
+  <script type="importmap">{"imports":{"three":"/vendor/three/build/three.module.js","three/addons/":"/vendor/three/examples/jsm/"}}</script>
+  <script type="module" src="bootstrap.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/room/1">EzStorage<span>教具借用</span></a>
+    <nav class="rooms" aria-label="儲存室"></nav>
+    <label class="mobile-room-picker"><span class="visually-hidden">切換房間</span><select id="room-picker" aria-label="切換房間"></select></label>
+    <form id="inventory-search-form" class="topbar-search" role="search">
+      <label for="inventory-search" class="visually-hidden">搜尋所有房間的物品</label>
+      <div class="search-controls">
+        <input id="inventory-search" type="search" placeholder="物品名稱、財產編號或位置編號" autocomplete="off" aria-controls="app" aria-describedby="inventory-search-hint">
+        <button type="button" class="text-button" id="clear-search" hidden>清除</button>
+      </div>
+      <span id="inventory-search-hint" class="visually-hidden">搜尋範圍包含所有房間。</span>
+    </form>
+    <details class="service-menu"><summary>更多服務</summary><nav class="top-actions" aria-label="借用服務">
+      <a href="#/qr">QR Code 列印</a>
+      <a href="#/numbering">財編規則</a>
+      <a href="#/manage" id="manage-link" hidden>管理空間</a>
+      <a href="#/mine">我的借用</a>
+    </nav></details>
+    <button type="button" id="account" class="login">登入</button>
+  </header>
+  <main id="app"><p class="loading" role="status">正在整理教具資料…</p></main>
+  <dialog id="account-dialog" aria-labelledby="account-heading">
+    <form method="dialog" class="dialog-close"><button class="icon-button" aria-label="關閉帳號選擇"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></form>
+    <h2 id="account-heading">登入 EzStorage</h2>
+    <div id="accounts" class="accounts"></div>
+  </dialog>
+  <noscript>請啟用 JavaScript，才能使用教具借用系統。</noscript>
+</body>
+</html>

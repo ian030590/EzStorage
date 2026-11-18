@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-15T14:13:49.907221Z",
+  "title": "Design System: EzStorage",
+  "extensions": {
+    "colorMeta": {
+      "blue": {
+        "role": "primary",
+        "displayName": "Cyanotype Blue",
+        "tonalRamp": [
+          "oklch(15% 0.0200 261.50)",
+          "oklch(27% 0.0599 261.50)",
+          "oklch(39% 0.0999 261.50)",
+          "oklch(51% 0.1332 261.50)",
+          "oklch(63% 0.1332 261.50)",
+          "oklch(75% 0.1066 261.50)",
+          "oklch(87% 0.0533 261.50)",
+          "oklch(95% 0.0133 261.50)"
+        ]
+      },
+      "blue-hover": {
+        "role": "primary",
+        "displayName": "Deep Cyanotype",
+        "tonalRamp": [
+          "oklch(15% 0.0167 261.83)",
+          "oklch(27% 0.0501 261.83)",
+          "oklch(39% 0.0834 261.83)",
+          "oklch(51% 0.1112 261.83)",
+          "oklch(63% 0.1112 261.83)",
+          "oklch(75% 0.0890 261.83)",
+          "oklch(87% 0.0445 261.83)",
+          "oklch(95% 0.0111 261.83)"
+        ]
+      },
+      "yellow": {
+        "role": "secondary",
+        "displayName": "Highlighter Yellow",
+        "tonalRamp": [
+          "oklch(15% 0.0238 88.96)",
+          "oklch(27% 0.0713 88.96)",
+          "oklch(39% 0.1188 88.96)",
+          "oklch(51% 0.1584 88.96)",
+          "oklch(63% 0.1584 88.96)",
+          "oklch(75% 0.1267 88.96)",
+          "oklch(87% 0.0634 88.96)",
+          "oklch(95% 0.0158 88.96)"
+        ]
+      },
+      "yellow-layer": {
+        "role": "secondary",
+        "displayName": "Layer Ochre",
+        "tonalRamp": [
+          "oklch(15% 0.0229 87.63)",
+          "oklch(27% 0.0686 87.63)",
+          "oklch(39% 0.1143 87.63)",
+          "oklch(51% 0.1523 87.63)",
+          "oklch(63% 0.1523 87.63)",
+          "oklch(75% 0.1219 87.63)",
+          "oklch(87% 0.0609 87.63)",
+          "oklch(95% 0.0152 87.63)"
+        ]
+      },
+      "red": {
+        "role": "tertiary",
+        "displayName": "Redline Red",
+        "tonalRamp": [
+          "oklch(15% 0.0271 31.98)",
+          "oklch(27% 0.0812 31.98)",
+          "oklch(39% 0.1353 31.98)",
+          "oklch(51% 0.1805 31.98)",
+          "oklch(63% 0.1805 31.98)",
+          "oklch(75% 0.1444 31.98)",
+          "oklch(87% 0.0722 31.98)",
+          "oklch(95% 0.0180 31.98)"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Drafting Ground",
+        "tonalRamp": [
+          "oklch(15% 0.0010 247.90)",
+          "oklch(27% 0.0031 247.90)",
+          "oklch(39% 0.0052 247.90)",
+          "oklch(51% 0.0069 247.90)",
+          "oklch(63% 0.0069 247.90)",
+          "oklch(75% 0.0055 247.90)",
+          "oklch(87% 0.0027 247.90)",
+          "oklch(95% 0.0007 247.90)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Drawing Ink",
+        "tonalRamp": [
+          "oklch(15% 0.0084 264.00)",
+          "oklch(27% 0.0253 264.00)",
+          "oklch(39% 0.0422 264.00)",
+          "oklch(51% 0.0562 264.00)",
+          "oklch(63% 0.0562 264.00)",
+          "oklch(75% 0.0450 264.00)",
+          "oklch(87% 0.0225 264.00)",
+          "oklch(95% 0.0056 264.00)"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Slate Annotation",
+        "tonalRamp": [
+          "oklch(15% 0.0070 262.58)",
+          "oklch(27% 0.0209 262.58)",
+          "oklch(39% 0.0349 262.58)",
+          "oklch(51% 0.0465 262.58)",
+          "oklch(63% 0.0465 262.58)",
+          "oklch(75% 0.0372 262.58)",
+          "oklch(87% 0.0186 262.58)",
+          "oklch(95% 0.0047 262.58)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline Grey",
+        "tonalRamp": [
+          "oklch(15% 0.0030 252.90)",
+          "oklch(27% 0.0089 252.90)",
+          "oklch(39% 0.0149 252.90)",
+          "oklch(51% 0.0199 252.90)",
+          "oklch(63% 0.0199 252.90)",
+          "oklch(75% 0.0159 252.90)",
+          "oklch(87% 0.0080 252.90)",
+          "oklch(95% 0.0020 252.90)"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Paper White",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(27% 0.0000 0.00)",
+          "oklch(39% 0.0000 0.00)",
+          "oklch(51% 0.0000 0.00)",
+          "oklch(63% 0.0000 0.00)",
+          "oklch(75% 0.0000 0.00)",
+          "oklch(87% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "inverse-muted": {
+        "role": "neutral",
+        "displayName": "Blue-Bar Annotation",
+        "tonalRamp": [
+          "oklch(15% 0.0027 261.34)",
+          "oklch(27% 0.0080 261.34)",
+          "oklch(39% 0.0134 261.34)",
+          "oklch(51% 0.0179 261.34)",
+          "oklch(63% 0.0179 261.34)",
+          "oklch(75% 0.0143 261.34)",
+          "oklch(87% 0.0072 261.34)",
+          "oklch(95% 0.0018 261.34)"
+        ]
+      },
+      "hover-plane": {
+        "role": "neutral",
+        "displayName": "Hover Plane",
+        "tonalRamp": [
+          "oklch(15% 0.0017 252.09)",
+          "oklch(27% 0.0052 252.09)",
+          "oklch(39% 0.0086 252.09)",
+          "oklch(51% 0.0115 252.09)",
+          "oklch(63% 0.0115 252.09)",
+          "oklch(75% 0.0092 252.09)",
+          "oklch(87% 0.0046 252.09)",
+          "oklch(95% 0.0011 252.09)"
+        ]
+      },
+      "unit-light": {
+        "role": "neutral",
+        "displayName": "Unit Light",
+        "tonalRamp": [
+          "oklch(15% 0.0024 253.91)",
+          "oklch(27% 0.0073 253.91)",
+          "oklch(39% 0.0121 253.91)",
+          "oklch(51% 0.0161 253.91)",
+          "oklch(63% 0.0161 253.91)",
+          "oklch(75% 0.0129 253.91)",
+          "oklch(87% 0.0064 253.91)",
+          "oklch(95% 0.0016 253.91)"
+        ]
+      },
+      "unit-shade": {
+        "role": "neutral",
+        "displayName": "Unit Shade",
+        "tonalRamp": [
+          "oklch(15% 0.0034 254.41)",
+          "oklch(27% 0.0103 254.41)",
+          "oklch(39% 0.0171 254.41)",
+          "oklch(51% 0.0228 254.41)",
+          "oklch(63% 0.0228 254.41)",
+          "oklch(75% 0.0183 254.41)",
+          "oklch(87% 0.0091 254.41)",
+          "oklch(95% 0.0023 254.41)"
+        ]
+      },
+      "unit-interior": {
+        "role": "neutral",
+        "displayName": "Unit Interior",
+        "tonalRamp": [
+          "oklch(15% 0.0055 254.91)",
+          "oklch(27% 0.0166 254.91)",
+          "oklch(39% 0.0277 254.91)",
+          "oklch(51% 0.0370 254.91)",
+          "oklch(63% 0.0370 254.91)",
+          "oklch(75% 0.0296 254.91)",
+          "oklch(87% 0.0148 254.91)",
+          "oklch(95% 0.0037 254.91)"
+        ]
+      },
+      "room-floor": {
+        "role": "neutral",
+        "displayName": "Room Floor",
+        "tonalRamp": [
+          "oklch(15% 0.0008 247.88)",
+          "oklch(27% 0.0023 247.88)",
+          "oklch(39% 0.0038 247.88)",
+          "oklch(51% 0.0051 247.88)",
+          "oklch(63% 0.0051 247.88)",
+          "oklch(75% 0.0041 247.88)",
+          "oklch(87% 0.0021 247.88)",
+          "oklch(95% 0.0005 247.88)"
+        ]
+      },
+      "room-wall": {
+        "role": "neutral",
+        "displayName": "Room Wall",
+        "tonalRamp": [
+          "oklch(15% 0.0024 253.91)",
+          "oklch(27% 0.0073 253.91)",
+          "oklch(39% 0.0121 253.91)",
+          "oklch(51% 0.0162 253.91)",
+          "oklch(63% 0.0162 253.91)",
+          "oklch(75% 0.0129 253.91)",
+          "oklch(87% 0.0065 253.91)",
+          "oklch(95% 0.0016 253.91)"
+        ]
+      },
+      "stock-mask": {
+        "role": "neutral",
+        "displayName": "Stock Mask",
+        "tonalRamp": [
+          "oklch(15% 0.0058 264.77)",
+          "oklch(27% 0.0175 264.77)",
+          "oklch(39% 0.0292 264.77)",
+          "oklch(51% 0.0389 264.77)",
+          "oklch(63% 0.0389 264.77)",
+          "oklch(75% 0.0312 264.77)",
+          "oklch(87% 0.0156 264.77)",
+          "oklch(95% 0.0039 264.77)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Wordmark",
+        "purpose": "Compact Barlow Semi Condensed brand wordmark."
+      },
+      "headline": {
+        "displayName": "Page Heading",
+        "purpose": "Main page titles; compact page titles reduce to 24px on phones."
+      },
+      "title": {
+        "displayName": "Section Heading",
+        "purpose": "Ordinary section headings outside the compact inventory panel."
+      },
+      "item-title": {
+        "displayName": "Inventory Title",
+        "purpose": "Item names and compact panel headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Traditional Chinese page copy and fields; email prose opens to line-height 1.9 and a 65ch measure."
+      },
+      "body-compact": {
+        "displayName": "Panel Body",
+        "purpose": "Compact inventory descriptions, borrower rows, annotations, and layer controls."
+      },
+      "label": {
+        "displayName": "Action Label",
+        "purpose": "Ordinary buttons; panel action labels use the compact 13px size."
+      },
+      "figure": {
+        "displayName": "Prominent Figure",
+        "purpose": "Remaining counts and room tags; selected panel identifiers strengthen to weight 700."
+      },
+      "figure-compact": {
+        "displayName": "Compact Figure",
+        "purpose": "Dates, borrower quantities, and codes; tabular figures with weight changes supplying rank."
+      }
+    },
+    "shadows": [
+      {
+        "name": "keyboard-halo",
+        "value": "0 0 0 5px var(--ink)",
+        "purpose": "Keyboard focus only, paired with a 2px yellow outline and 2px offset; layer controls use a 3px offset. Interface containers have no resting drop shadows."
+      }
+    ],
+    "motion": [
+      {
+        "name": "room-interpolation",
+        "value": "current += (target - current) * 0.12",
+        "purpose": "Per animation frame, room3d.js approaches the camera, zoom, door, drawer, and lid target states. This is an interpolation factor, not a CSS duration."
+      },
+      {
+        "name": "room-selection-zoom",
+        "value": "1.08",
+        "purpose": "Multiplier applied to the user zoom when selecting a unit; the resulting zoom is capped at 1.6."
+      },
+      {
+        "name": "reduced-motion-room",
+        "value": "1",
+        "purpose": "Under prefers-reduced-motion: reduce, room interpolation snaps to target. CSS separately disables animation, transition, and smooth scrolling."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-desktop-max",
+        "value": "1170px"
+      },
+      {
+        "name": "stacked-layout-max",
+        "value": "899px"
+      },
+      {
+        "name": "small-phone-max",
+        "value": "420px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Blue native action with its implemented hover, disabled, and keyboard focus treatments.",
+      "html": "<button class=\"ds-primary\" type=\"button\">???????</button>",
+      "css": ".ds-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--blue, #173F8A); border-radius: 4px; padding: 9px 17px; background: var(--blue, #173F8A); color: var(--white, #fff); font: 500 14px/1.6 'Noto Sans TC', sans-serif; text-decoration: none; cursor: pointer; touch-action: manipulation; }\n.ds-primary:hover:enabled { background: #102F6B; }\n.ds-primary:disabled { cursor: not-allowed; color: var(--secondary, #46546E); background: var(--ground, #EEF2F6); border-color: var(--rule, #C9D3DF); }\n.ds-primary:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White action with a blue outline; hover returns it to the drafting ground.",
+      "html": "<button class=\"ds-secondary\" type=\"button\">????</button>",
+      "css": ".ds-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--blue, #173F8A); border-radius: 4px; padding: 9px 17px; background: var(--white, #fff); color: var(--blue, #173F8A); font: 500 14px/1.6 'Noto Sans TC', sans-serif; text-decoration: none; cursor: pointer; touch-action: manipulation; }\n.ds-secondary:hover:enabled { background: var(--ground, #EEF2F6); }\n.ds-secondary:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Isolated Cancellation",
+      "kind": "button",
+      "refersTo": "button-text",
+      "description": "The underlined cancellation action with the divider and clear space carried by its source container.",
+      "html": "<div class=\"ds-cancel-isolation\"><button class=\"ds-cancel-button\" type=\"button\">????</button></div>",
+      "css": ".ds-cancel-isolation { display: block; padding-top: 24px; margin-top: 18px; border-top: 1px solid var(--rule, #C9D3DF); }\n.ds-cancel-button { border: 0; background: transparent; color: var(--blue, #173F8A); text-decoration: underline; text-underline-offset: 4px; padding: 10px 0; min-height: 44px; font: 400 14px/1.6 'Noto Sans TC', sans-serif; cursor: pointer; touch-action: manipulation; }\n.ds-cancel-button:hover { text-decoration: underline; }\n.ds-cancel-button:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "A labelled Traditional Chinese field with a slate border and a two-color focus treatment.",
+      "html": "<label class=\"ds-field\">??<input class=\"ds-input\" type=\"text\" autocomplete=\"name\"></label>",
+      "css": ".ds-field { display: grid; gap: 6px; color: var(--secondary, #46546E); font: 400 14px/1.6 'Noto Sans TC', sans-serif; }\n.ds-input { border: 1px solid var(--secondary, #46546E); border-radius: 3px; background: var(--white, #fff); color: var(--ink, #14213D); min-height: 44px; padding: 9px 10px; min-width: 0; font: 400 14px/1.6 'Noto Sans TC', sans-serif; caret-color: var(--blue, #173F8A); touch-action: manipulation; }\n.ds-input:hover { border-color: var(--secondary, #46546E); }\n.ds-input[readonly] { background: var(--ground, #EEF2F6); }\n.ds-input:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Room Navigation",
+      "kind": "nav",
+      "refersTo": "room-navigation",
+      "description": "The room-tab portion of the blue service bar; white current text and a yellow underline identify selection.",
+      "html": "<nav class=\"ds-rooms\" aria-label=\"???\"><a class=\"ds-room-link\" href=\"#/room/1\" aria-current=\"page\">?? ????</a><a class=\"ds-room-link\" href=\"#/room/2\">?? ????</a></nav>",
+      "css": ".ds-rooms { display: flex; gap: 4px; height: 56px; background: var(--blue, #173F8A); font: 400 14px/1.6 'Noto Sans TC', sans-serif; }\n.ds-room-link { display: flex; align-items: center; padding: 0 16px; border-bottom: 3px solid transparent; text-decoration: none; font-size: 15px; white-space: nowrap; color: #E4EBF7; touch-action: manipulation; }\n.ds-room-link:hover { text-decoration: none; }\n.ds-room-link[aria-current=\"page\"] { border-bottom-color: var(--yellow, #F2C230); color: var(--white, #fff); font-weight: 500; }\n@media (min-width: 900px) and (max-width: 1170px) { .ds-room-link { padding: 0 10px; } }\n@media (max-width: 899px) { .ds-rooms { gap: 0; } .ds-room-link { font-size: 12px; padding: 0 8px; } }\n@media (max-width: 420px) { .ds-room-link { font-size: 11px; padding: 0 6px; } }\n.ds-room-link:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Storage Keynote Tags",
+      "kind": "chip",
+      "refersTo": "keynote-tag",
+      "description": "Default and selected storage identifiers. The preview omits room positioning; phone hit areas and visible circles follow the final CSS.",
+      "html": "<div class=\"ds-keynotes\"><button class=\"ds-keynote\" type=\"button\" aria-label=\"A1 ???\" aria-pressed=\"false\">A1</button><button class=\"ds-keynote\" type=\"button\" aria-label=\"B2 ???\" aria-pressed=\"true\">B2</button></div>",
+      "css": ".ds-keynotes { display: flex; align-items: center; gap: 16px; padding: 8px; }\n.ds-keynote { position: relative; width: 36px; height: 36px; border: 1.4px solid var(--ink, #14213D); border-radius: 50%; background: var(--white, #fff); color: var(--ink, #14213D); font: 600 16px 'Barlow Semi Condensed', sans-serif; display: grid; place-items: center; padding: 0; cursor: pointer; touch-action: manipulation; }\n.ds-keynote[aria-pressed=\"true\"] { background: var(--ink, #14213D); color: var(--yellow, #F2C230); }\n.ds-keynote:hover { background: var(--yellow, #F2C230); color: var(--ink, #14213D); }\n@media (max-width: 899px) {\n  .ds-keynote { width: 44px; height: 44px; border: 0; background: transparent; isolation: isolate; font-size: 14px; }\n  .ds-keynote::before { content: ''; position: absolute; inset: 7px; width: 30px; height: 30px; box-sizing: border-box; border: 1.4px solid var(--ink, #14213D); border-radius: 50%; background: var(--white, #fff); z-index: -1; }\n  .ds-keynote[aria-pressed=\"true\"] { background: transparent; color: var(--yellow, #F2C230); }\n  .ds-keynote[aria-pressed=\"true\"]::before { background: var(--ink, #14213D); }\n  .ds-keynote:hover { background: transparent; color: var(--ink, #14213D); }\n  .ds-keynote:hover::before { background: var(--yellow, #F2C230); }\n}\n.ds-keynote:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Borrowing Record",
+      "kind": "card",
+      "refersTo": "record-container",
+      "description": "A static excerpt of the square, ruled borrowing record with a heading, status, and tabular metadata.",
+      "html": "<article class=\"ds-record\"><div class=\"ds-record-heading\"><h2 class=\"ds-record-title\">????</h2><span>??? ? 1 ?</span></div><div class=\"ds-record-details\"><span class=\"ds-record-num\">A1</span><span class=\"ds-record-num\">11/15 ? 11/22</span></div></article>",
+      "css": ".ds-record { background: var(--white, #fff); color: var(--ink, #14213D); padding: 22px 24px; border-bottom: 1px solid var(--rule, #C9D3DF); font: 400 14px/1.6 'Noto Sans TC', sans-serif; }\n.ds-record-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }\n.ds-record-title { margin: 0; font-size: 20px; font-weight: 700; text-wrap: balance; }\n.ds-record-details { display: flex; gap: 8px 24px; flex-wrap: wrap; margin: 8px 0; color: var(--secondary, #46546E); }\n.ds-record-num { font-family: 'Barlow Semi Condensed', 'Noto Sans TC', sans-serif; font-variant-numeric: tabular-nums; }\n@media (max-width: 899px) { .ds-record { padding: 20px 16px; } .ds-record-heading { flex-wrap: wrap; gap: 6px; } }"
+    },
+    {
+      "name": "Inventory Layer Band",
+      "kind": "custom",
+      "refersTo": "layer-band",
+      "description": "A compact layer selector and semibold storage code above a hairline; selection changes weight and ink color.",
+      "html": "<div class=\"ds-layer-band\"><button class=\"ds-layer-button\" type=\"button\" aria-pressed=\"false\">? 1 ?</button><span class=\"ds-layer-code\">A1-1</span></div>",
+      "css": ".ds-layer-band { display: flex; justify-content: space-between; color: var(--secondary, #46546E); padding: 14px 0 8px; border-bottom: 1px solid var(--rule, #C9D3DF); background: var(--white, #fff); font: 400 13px/1.6 'Noto Sans TC', sans-serif; }\n.ds-layer-code { font-family: 'Barlow Semi Condensed', 'Noto Sans TC', sans-serif; font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ink, #14213D); }\n.ds-layer-button { border: 0; background: transparent; color: var(--secondary, #46546E); font: 400 13px/1.6 'Noto Sans TC', sans-serif; padding: 0; min-height: 24px; text-align: left; cursor: pointer; touch-action: manipulation; }\n.ds-layer-button:hover, .ds-layer-button[aria-pressed=\"true\"] { color: var(--ink, #14213D); font-weight: 700; }\n@media (max-width: 899px) { .ds-layer-button { min-height: 44px; } }\n.ds-layer-button:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 3px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    },
+    {
+      "name": "Scan Choice",
+      "kind": "button",
+      "refersTo": "scan-choice",
+      "description": "One of the large on-site action rows, using the actual borrow SVG path and pale-plane hover.",
+      "html": "<button class=\"ds-scan-choice\" type=\"button\"><svg class=\"ds-scan-icon\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M6 5h12v16H6zM9 5V2h6v3M9 10h6m-6 4h6m-6 4h4\"/></svg><span><strong class=\"ds-scan-title\">?????</strong><small class=\"ds-scan-hint\">?????????????</small></span></button>",
+      "css": ".ds-scan-choice { display: flex; align-items: center; gap: 18px; text-align: left; background: var(--white, #fff); color: var(--ink, #14213D); border: 1px solid var(--rule, #C9D3DF); padding: 22px; min-height: 96px; font: 400 14px/1.6 'Noto Sans TC', sans-serif; cursor: pointer; touch-action: manipulation; }\n.ds-scan-choice:hover { background: #E3E9F0; }\n.ds-scan-icon { width: 28px; height: 28px; flex-shrink: 0; stroke: var(--ink, #14213D); stroke-width: 1.5; fill: none; }\n.ds-scan-title { font-size: 18px; font-weight: 700; display: block; }\n.ds-scan-hint { font-size: 14px; color: var(--secondary, #46546E); }\n.ds-scan-choice:focus-visible { outline: 2px solid var(--yellow, #F2C230); outline-offset: 2px; box-shadow: 0 0 0 5px var(--ink, #14213D); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Axonometric Inventory",
+    "overview": "The Axonometric Inventory treats the storage room as a legible architectural drawing. Cool pale planes, ink outlines, circled keynote tags, and a blue service bar make the physical location and its contents readable together. The character is practical, precise, and calm, with full color concentrated in item imagery.\n\nTraditional Chinese text carries the instructions; condensed figures keep codes, dates, and quantities easy to compare. Dense information sits in white, ruled rows, with hierarchy supplied by weight and spacing. Flat controls and visible keyboard focus support colleagues using phones in the storage room and larger screens elsewhere.",
+    "keyCharacteristics": [
+      "Architectural linework, pale planes, and circled storage identifiers.",
+      "Blue navigation and actions, yellow selection, and red overdue values.",
+      "Compact Traditional Chinese text paired with condensed tabular figures.",
+      "Flat, ruled containers with small control corners and generous touch targets."
+    ],
+    "rules": [
+      {
+        "name": "The Stock Signal Rule",
+        "body": "Yellow identifies selection; red identifies overdue values or errors. Keep these meanings consistent across room, panel, and forms.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Size Panel Rule",
+        "body": "Keep inventory-panel text at the compact body and item-title sizes; establish rank with weight, hairlines, and spacing.",
+        "section": "typography"
+      },
+      {
+        "name": "The Drawn Depth Rule",
+        "body": "Keep interface surfaces flat; express the room's depth through planes, outlines, and opening geometry, while retaining the keyboard focus halo.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep blue for navigation and actions, yellow for selection, and red for overdue values and errors.",
+      "Do use Noto Sans TC for Traditional Chinese text and condensed tabular figures for codes, dates, and quantities.",
+      "Do keep inventory-panel hierarchy to compact body and item-title sizes, with weight and hairlines supplying rank.",
+      "Do preserve drawn room depth, circled storage tags, leader lines, and the room-only 40px drafting grid.",
+      "Do keep visible keyboard focus, phone-sized hit areas, and reduced-motion behavior when extending components.",
+      "Do isolate the cancellation action with its divider and clear vertical space.",
+      "Do retain a signed day count and a proportional top-down stock mask as readable availability signals."
+    ],
+    "donts": [
+      "Don't extend the room's 40px drafting grid onto form, record, email, or print-page backgrounds.",
+      "Don't replace the room's pale architectural planes with full-color decorative materials; keep illustrative color in item imagery.",
+      "Don't add decorative drop shadows to flat interface containers or remove the focus halo in the name of flatness.",
+      "Don't turn keynote identifiers into generic status pills or shrink their phone hit areas to the visible circle.",
+      "Don't treat synthetic demo illustrations, sample inventory, account details, or draft email wording as production identity or content."
+    ]
+  }
+}
